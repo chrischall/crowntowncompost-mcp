@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crowntowncompost-connector",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Crown Town Compost is stateless — only the per-session MCP agent Durable
+  // Object is declared (no local cache, so no cache DO like the OFW connector).
+  "durable_objects": {
+    "bindings": [{ "name": "MCP_OBJECT", "class_name": "CrownTownMcpAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CrownTownMcpAgent"] }],
+  // This connector's own OAuth token store (title: crowntowncompost-connector-oauth),
+  // kept separate from every other connector's so OAuth grants never cross-wire.
+  //
+  // The binding NAME must stay `OAUTH_KV`: @chrischall/mcp-connector's OAuth
+  // provider resolves that literal name. `wrangler kv namespace create` suggests
+  // a binding derived from the TITLE (crowntowncompost_connector_oauth) — using
+  // that deploys clean and then fails at login, because the provider finds no
+  // store for its grants. Take only the id from wrangler's output.
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "d04384f81447462e8e2e4f8466b62457" }],
+  // Production custom domain. The nullnet.app zone must be in the deploying
+  // account; the edge TLS cert provisions a few minutes AFTER deploy, so https
+  // may refuse connections briefly — use the *.workers.dev URL meanwhile.
+  // Remove this route to deploy to *.workers.dev only.
+  "routes": [{ "pattern": "connector.crowntowncompost.nullnet.app", "custom_domain": true }],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  }
+}
