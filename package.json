@@ -40,7 +40,10 @@
     "dev": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:test": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
     "@chrischall/mcp-utils": "^0.14.0",
@@ -50,10 +53,16 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@chrischall/mcp-connector": "^1.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
+    "@cloudflare/workers-oauth-provider": "^0.8.1",
+    "@cloudflare/workers-types": "^5.20260708.1",
     "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.7",
+    "agents": "^0.19.0",
     "esbuild": "^0.28.0",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "wrangler": "^4.110.0"
   }
 }

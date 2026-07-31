@@ -6,3 +6,5 @@ dist/
 *.tgz
 coverage/
 *.tsbuildinfo
+.dev.vars
+.wrangler/
