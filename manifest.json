@@ -17,13 +17,21 @@
   "homepage": "https://github.com/chrischall/crowntowncompost-mcp",
   "support": "https://github.com/chrischall/crowntowncompost-mcp/issues",
   "license": "MIT",
-  "keywords": ["compost", "curbside", "pickup", "stopsuite", "recycling"],
+  "keywords": [
+    "compost",
+    "curbside",
+    "pickup",
+    "stopsuite",
+    "recycling"
+  ],
   "server": {
     "type": "node",
     "entry_point": "dist/bundle.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/bundle.js"],
+      "args": [
+        "${__dirname}/dist/bundle.js"
+      ],
       "env": {
         "CROWNTOWN_USERNAME": "${user_config.crowntown_username}",
         "CROWNTOWN_PASSWORD": "${user_config.crowntown_password}"
@@ -47,19 +55,55 @@
     }
   },
   "tools": [
-    { "name": "crowntown_healthcheck", "description": "Check connectivity and authentication status" },
-    { "name": "crowntown_get_dashboard", "description": "Account status, subscription, addresses, and environmental impact" },
-    { "name": "crowntown_get_account", "description": "Contact details and notification preferences" },
-    { "name": "crowntown_update_account", "description": "Update contact details and notification preferences" },
-    { "name": "crowntown_list_service_history", "description": "List past collection stops and their outcomes" },
-    { "name": "crowntown_list_upcoming_services", "description": "List upcoming collection days that can be skipped" },
-    { "name": "crowntown_skip_service", "description": "Skip or un-skip an upcoming collection day" },
-    { "name": "crowntown_list_invoices", "description": "List billing history with payment links" },
-    { "name": "crowntown_report_missed_pickup", "description": "Report a missed collection" },
-    { "name": "crowntown_contact_support", "description": "Send a message to customer support" }
+    {
+      "name": "crowntown_healthcheck",
+      "description": "Check connectivity and authentication status"
+    },
+    {
+      "name": "crowntown_get_dashboard",
+      "description": "Account status, subscription, addresses, and environmental impact"
+    },
+    {
+      "name": "crowntown_get_account",
+      "description": "Contact details and notification preferences"
+    },
+    {
+      "name": "crowntown_update_account",
+      "description": "Update contact details and notification preferences"
+    },
+    {
+      "name": "crowntown_list_service_history",
+      "description": "List past collection stops and their outcomes"
+    },
+    {
+      "name": "crowntown_list_upcoming_services",
+      "description": "List upcoming collection days that can be skipped"
+    },
+    {
+      "name": "crowntown_skip_service",
+      "description": "Skip or un-skip an upcoming collection day"
+    },
+    {
+      "name": "crowntown_list_invoices",
+      "description": "List billing history with payment links"
+    },
+    {
+      "name": "crowntown_report_missed_pickup",
+      "description": "Report a missed collection"
+    },
+    {
+      "name": "crowntown_contact_support",
+      "description": "Send a message to customer support"
+    }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32", "linux"],
-    "runtimes": { "node": ">=22.5" }
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.5"
+    }
   }
 }

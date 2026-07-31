@@ -12,7 +12,9 @@
       "registryType": "npm",
       "identifier": "crowntowncompost-mcp",
       "version": "0.1.0",
-      "transport": { "type": "stdio" },
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "CROWNTOWN_USERNAME",

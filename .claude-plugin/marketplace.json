@@ -16,11 +16,18 @@
       "source": "./",
       "description": "MCP server for the Crown Town Compost customer portal — view pickups and invoices, skip a service, and report a missed collection. Signs in server-side with your own portal username and password.",
       "version": "0.1.0",
-      "author": { "name": "Chris Hall" },
+      "author": {
+        "name": "Chris Hall"
+      },
       "homepage": "https://github.com/chrischall/crowntowncompost-mcp",
       "repository": "https://github.com/chrischall/crowntowncompost-mcp",
       "license": "MIT",
-      "keywords": ["compost", "curbside", "pickup", "mcp"],
+      "keywords": [
+        "compost",
+        "curbside",
+        "pickup",
+        "mcp"
+      ],
       "category": "productivity"
     }
   ]
