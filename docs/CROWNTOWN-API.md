@@ -16,10 +16,17 @@ CSRF via `csrftoken` cookie + `csrfmiddlewaretoken` hidden field.
   account data. 61 stop records, 22 invoices, 9 upcoming skippable days.
 - **CSRF-on-POST — live-verified.** The two datatable endpoints are POSTs and succeed through the
   same `X-CSRFToken` + `Origin` + `Referer` header path the write tools use.
-- **Writes — request shapes captured from the live forms, but NOT executed.** Each write endpoint's
-  field list below was read off the rendered form in a signed-in session; no write has been run
-  against the live account (skipping a real collection is a consequential, customer-visible action).
-  The write tools are confirm-gated and verify by re-reading, but their bodies are unexercised.
+- **Writes — `skip-service` is live-verified; the rest are captured but NOT executed.**
+  - `POST /accounts/service-calendar/skip-service/` was exercised end-to-end against the live
+    account on 2026-07-31 (skipped the Aug 7 2026 collection, `rid=2815 clid=3360`): it answered
+    `200`, the calendar button flipped `skip` → `unskip` ("Resume Service"), and — independent
+    confirmation from a different page — the dashboard's next-service date advanced from
+    Aug. 7 to Aug. 14. So the body shape, the CSRF/Referer headers, and the re-read verification
+    are all confirmed correct.
+  - Every other write endpoint's field list below was read off the rendered form in a signed-in
+    session but has **not** been submitted (they variously email staff, alter account settings, or
+    cancel service). Those tools are confirm-gated and verify by re-reading where a re-read exists,
+    but their bodies remain unexercised.
 
 Shapes were captured through a signed-in browser session; values redacted, only shapes recorded.
 
