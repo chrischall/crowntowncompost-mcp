@@ -49,6 +49,7 @@ host's install-time probe succeeds); the configuration error surfaces on the fir
 | `crowntown_healthcheck` | Whether credentials work, plus account status — distinguishes "no creds" from "bad creds" from "site error" |
 | `crowntown_get_dashboard` | Account status, subscription (plan, price, renewal date), next service date, service addresses + pickup days, and your environmental impact |
 | `crowntown_get_account` | Contact details and notification preferences |
+| `crowntown_get_pickup_schedule` | Pickup day(s) and time window per address — the official set-out-by time plus an observed arrival window (earliest/latest/typical, consistent vs varies) derived from your collection history |
 | `crowntown_list_service_history` | Past collection stops — date, outcome, time, weight, services. Paginated; filter by `success`/`missing`/`empty`/`inaccessible`/`unacceptable` |
 | `crowntown_list_upcoming_services` | Upcoming collection days, each with the ids needed to skip it |
 | `crowntown_list_invoices` | Billing history with amounts, status, and Stripe payment links |

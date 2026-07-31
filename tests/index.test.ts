@@ -24,6 +24,7 @@ describe('full tool surface', () => {
       'crowntown_contact_support',
       'crowntown_get_account',
       'crowntown_get_dashboard',
+      'crowntown_get_pickup_schedule',
       'crowntown_healthcheck',
       'crowntown_list_invoices',
       'crowntown_list_service_history',
@@ -50,7 +51,7 @@ describe('full tool surface', () => {
 
   it('marks every read tool readOnly', async () => {
     const tools = await fullTools();
-    const reads = ['crowntown_healthcheck', 'crowntown_get_dashboard', 'crowntown_get_account', 'crowntown_list_service_history', 'crowntown_list_upcoming_services', 'crowntown_list_invoices'];
+    const reads = ['crowntown_healthcheck', 'crowntown_get_dashboard', 'crowntown_get_account', 'crowntown_get_pickup_schedule', 'crowntown_list_service_history', 'crowntown_list_upcoming_services', 'crowntown_list_invoices'];
     for (const name of reads) {
       expect(tools.find((x) => x.name === name)!.annotations?.readOnlyHint, name).toBe(true);
     }

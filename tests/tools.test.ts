@@ -90,6 +90,79 @@ describe('crowntown_list_upcoming_services', () => {
   });
 });
 
+describe('crowntown_get_pickup_schedule', () => {
+  const stop = (over: Record<string, unknown>) => ({
+    RecordID: 1, status: 'Success', timestamp: '9:34 a.m.', address: '123 Example Street',
+    weight: '', nickname: '', date: 'Friday, Jul 31, 2026', services: '35 x1', ...over,
+  });
+  const stops = {
+    meta: { page: 1, pages: 1, perpage: 60, total: 6, sort: 'desc', field: 'date' },
+    qs: '',
+    data: [
+      stop({ RecordID: 1, timestamp: '9:34 a.m.', date: 'Friday, Jul 31, 2026' }),
+      stop({ RecordID: 2, timestamp: '7:15 a.m.', date: 'Friday, Jul 24, 2026' }),
+      stop({ RecordID: 3, timestamp: '2:13 p.m.', date: 'Friday, Jul 17, 2026' }),
+      // Holiday shift: ran on a Saturday.
+      stop({ RecordID: 4, timestamp: 'noon', date: 'Saturday, Jul 11, 2026' }),
+      // A missed stop with no recorded time must not poison the window.
+      stop({ RecordID: 5, timestamp: '', date: 'Friday, Jul 3, 2026', status: 'Missing' }),
+      // Second address: tight, consistent times.
+      stop({ RecordID: 6, timestamp: '8:00 a.m.', address: '456 Second Ave', date: 'Tuesday, Jul 28, 2026' }),
+      stop({ RecordID: 7, timestamp: '8:20 a.m.', address: '456 Second Ave', date: 'Tuesday, Jul 21, 2026' }),
+    ],
+  };
+  const handler = (req: PortalRequest) =>
+    req.path.includes('/accounts/stops/api/') ? json(stops) : res({ body: DASHBOARD_HTML });
+
+  it('combines dashboard days with an observed window per address', async () => {
+    const { harness: h } = await setup(handler, (s, c) => registerServiceTools(s, c));
+    const out = await call(h, 'crowntown_get_pickup_schedule');
+    expect(out.next_service).toBe('Aug. 7, 2026');
+
+    const first = out.addresses.find((a: any) => a.address === '123 Example Street');
+    expect(first.pickup_days).toEqual(['Friday']);
+    expect(first.time_is_consistent).toBe(false);
+    expect(first.observed_pickup_window).toMatchObject({
+      sample_size: 4, // the empty-timestamp missed stop is excluded
+      earliest: '7:15 AM',
+      latest: '2:13 PM',
+      consistency: 'varies',
+    });
+    expect(first.off_schedule_days).toEqual({ Saturday: 1 });
+
+    const second = out.addresses.find((a: any) => a.address === '456 Second Ave');
+    expect(second.time_is_consistent).toBe(true);
+    expect(second.observed_pickup_window.consistency).toBe('consistent');
+    expect(second.off_schedule_days).toBeUndefined();
+  });
+
+  it('states the set-out policy and that no window is guaranteed', async () => {
+    const { harness: h } = await setup(handler, (s, c) => registerServiceTools(s, c));
+    const out = await call(h, 'crowntown_get_pickup_schedule');
+    expect(out.set_out_policy.guaranteed_window).toBeNull();
+    expect(out.set_out_policy.set_out_by).toBe('6:00 AM');
+    expect(out.notes.join(' ')).toMatch(/does not publish a guaranteed arrival-time window/i);
+  });
+
+  it('still returns days and next service when the history lookup fails', async () => {
+    const { harness: h } = await setup(
+      (req) => (req.path.includes('/accounts/stops/api/') ? res({ status: 500, body: 'err' }) : res({ body: DASHBOARD_HTML })),
+      (s, c) => registerServiceTools(s, c),
+    );
+    const out = await call(h, 'crowntown_get_pickup_schedule');
+    expect(out.addresses[0].pickup_days).toEqual(['Friday']);
+    expect(out.addresses[0].observed_pickup_window).toBeNull();
+    expect(out.notes.join(' ')).toMatch(/history lookup failed/i);
+  });
+
+  it('passes the history sample size through to the stops query', async () => {
+    const { harness: h, transport } = await setup(handler, (s, c) => registerServiceTools(s, c));
+    await call(h, 'crowntown_get_pickup_schedule', { history_sample: 25 });
+    const body = new URLSearchParams(transport.writes.find((r) => r.path.includes('/stops/api/'))!.body!);
+    expect(body.get('pagination[perpage]')).toBe('25');
+  });
+});
+
 describe('crowntown_skip_service', () => {
   it('makes NO network call without confirm and returns a preview', async () => {
     const { harness: h, transport } = await setup(() => res({ body: CALENDAR_HTML }), (s, c) => registerServiceTools(s, c));

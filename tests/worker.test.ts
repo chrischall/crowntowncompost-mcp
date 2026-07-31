@@ -79,6 +79,7 @@ describe('Crown Town Compost connector — tool surface under workerd', () => {
         'crowntown_contact_support',
         'crowntown_get_account',
         'crowntown_get_dashboard',
+        'crowntown_get_pickup_schedule',
         'crowntown_healthcheck',
         'crowntown_list_invoices',
         'crowntown_list_service_history',
