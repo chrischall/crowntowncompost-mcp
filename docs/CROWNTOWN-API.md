@@ -113,6 +113,18 @@ Form `POST` to self:
 Upcoming service days rendered as calendar events; each skippable day has a button
 `.submit-skip[data-rid][data-clid][data-action]` (action = skip/unskip toggle). Non-skippable days show "Not Skippable".
 
+### Pickup time window — NOT exposed by the portal
+
+Surveyed 2026-07-31: no portal surface (dashboard, service calendar, stops API, account form)
+carries a promised arrival-time window — the dashboard's Service Address table is day-only
+("Friday"). The only official time guidance is the marketing site's FAQ
+(`crowntowncompost.com/faq`): *"Just make sure your bin is set out at the curb by 6am on your
+pick-up day. We often start our routes early to beat the heat"* and *"Most customers set them out
+the night before just to be safe!"* — a company-wide set-out policy, not a per-account setting. The stops API's `timestamp` field records the actual collection time of
+every past stop, so `crowntown_get_pickup_schedule` derives an **observed** per-address window
+(earliest/latest/median/IQR) from recent history instead. Formats seen live: `9:34 a.m.`,
+`12:26 p.m.`, `2 p.m.`, `noon` (Django TIME_FORMAT).
+
 ### Other read pages
 - `GET /accounts/shop/` — product shop (add-ons); JS-rendered cart, `Checkout`.
 - `GET /accounts/service-history/` — HTML shell around the `stops/api` datatable (status filter select + date range).

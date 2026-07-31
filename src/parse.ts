@@ -1,9 +1,10 @@
 import { parse, type HTMLElement } from 'node-html-parser';
 
-// Parsers for the Crown Town Compost portal's server-rendered pages. All are
-// defensive: a missing field yields null/[] rather than throwing, so a markup
-// tweak degrades one field instead of breaking the whole tool. Verified against
-// the live DOM 2026-07-31 (see docs/CROWNTOWN-API.md).
+// Parsers for the Crown Town Compost portal's server-rendered pages and the
+// portal's rendered data values (Django-formatted times). All are defensive: a
+// missing field yields null/[] rather than throwing, so a markup tweak degrades
+// one field instead of breaking the whole tool. Verified against the live DOM
+// 2026-07-31 (see docs/CROWNTOWN-API.md).
 
 const collapse = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
@@ -144,6 +145,63 @@ export function parseAccountDetails(html: string): AccountDetails {
     phone: val('phone'),
     send_email_reminders: checked('send_email_reminders'),
     service_notifications: checked('service_notifications'),
+  };
+}
+
+/**
+ * Parse a Django TIME_FORMAT string from the stops API (`timestamp`) into
+ * minutes since midnight. The portal renders "9:34 a.m.", "12:26 p.m.",
+ * "2 p.m.", "noon", and "midnight" (all observed live 2026-07-31).
+ */
+export function parsePortalTime(s: string): number | null {
+  const t = collapse(s).toLowerCase();
+  if (!t) return null;
+  if (t === 'noon') return 12 * 60;
+  if (t === 'midnight') return 0;
+  const m = t.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?$/);
+  if (!m) return null;
+  let hour = Number(m[1]);
+  const minute = Number(m[2] ?? '0');
+  if (hour < 1 || hour > 12 || minute > 59) return null;
+  if (hour === 12) hour = 0;
+  return (m[3] === 'p' ? hour + 12 : hour) * 60 + minute;
+}
+
+/** Format minutes-since-midnight as a 12-hour clock time, e.g. 574 -> "9:34 AM". */
+export function formatClockTime(mins: number): string {
+  const h24 = Math.floor(mins / 60) % 24;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(mins % 60).padStart(2, '0')} ${h24 < 12 ? 'AM' : 'PM'}`;
+}
+
+export interface ObservedWindow {
+  sample_size: number;
+  earliest: string;
+  latest: string;
+  median: string;
+  /** Interquartile range — where the truck arrives most weeks. */
+  typical_window: string;
+  spread_minutes: number;
+  consistency: 'consistent' | 'varies';
+}
+
+// Below this earliest-to-latest spread the arrival time counts as "consistent".
+const CONSISTENT_SPREAD_MINUTES = 60;
+
+/** Summarize observed collection times (minutes since midnight) into a window. */
+export function summarizeObservedTimes(times: number[]): ObservedWindow | null {
+  if (times.length === 0) return null;
+  const sorted = [...times].sort((a, b) => a - b);
+  const at = (q: number): number => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  const spread = sorted[sorted.length - 1] - sorted[0];
+  return {
+    sample_size: sorted.length,
+    earliest: formatClockTime(sorted[0]),
+    latest: formatClockTime(sorted[sorted.length - 1]),
+    median: formatClockTime(at(0.5)),
+    typical_window: `${formatClockTime(at(0.25))} - ${formatClockTime(at(0.75))}`,
+    spread_minutes: spread,
+    consistency: spread <= CONSISTENT_SPREAD_MINUTES ? 'consistent' : 'varies',
   };
 }
 

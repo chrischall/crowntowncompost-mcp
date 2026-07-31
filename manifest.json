@@ -68,6 +68,10 @@
       "description": "Contact details and notification preferences"
     },
     {
+      "name": "crowntown_get_pickup_schedule",
+      "description": "Pickup days and observed arrival-time window per address"
+    },
+    {
       "name": "crowntown_update_account",
       "description": "Update contact details and notification preferences"
     },

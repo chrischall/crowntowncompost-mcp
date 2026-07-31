@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseDashboard, parseImpact, parseAccountDetails, parseSkippableServices } from '../src/parse.js';
+import {
+  parseDashboard,
+  parseImpact,
+  parseAccountDetails,
+  parseSkippableServices,
+  parsePortalTime,
+  formatClockTime,
+  summarizeObservedTimes,
+} from '../src/parse.js';
 import { DASHBOARD_HTML, IMPACT_HTML, UPDATE_FORM_HTML, CALENDAR_HTML } from './fixtures/pages.js';
 
 describe('parseDashboard', () => {
@@ -68,6 +76,60 @@ describe('parseAccountDetails', () => {
       send_email_reminders: false,
       service_notifications: true,
     });
+  });
+});
+
+describe('parsePortalTime', () => {
+  // Every format the live stops API rendered on 2026-07-31.
+  it('parses each Django TIME_FORMAT the portal renders', () => {
+    expect(parsePortalTime('9:34 a.m.')).toBe(9 * 60 + 34);
+    expect(parsePortalTime('12:26 p.m.')).toBe(12 * 60 + 26);
+    expect(parsePortalTime('2 p.m.')).toBe(14 * 60);
+    expect(parsePortalTime('noon')).toBe(12 * 60);
+    expect(parsePortalTime('midnight')).toBe(0);
+  });
+
+  it('handles the 12-hour edge cases', () => {
+    expect(parsePortalTime('12:05 a.m.')).toBe(5);
+    expect(parsePortalTime('12 p.m.')).toBe(12 * 60);
+  });
+
+  it('returns null for empty or unrecognized values', () => {
+    expect(parsePortalTime('')).toBeNull();
+    expect(parsePortalTime('&mdash;')).toBeNull();
+    expect(parsePortalTime('25:00 a.m.')).toBeNull();
+  });
+});
+
+describe('formatClockTime', () => {
+  it('formats minutes since midnight on a 12-hour clock', () => {
+    expect(formatClockTime(0)).toBe('12:00 AM');
+    expect(formatClockTime(9 * 60 + 34)).toBe('9:34 AM');
+    expect(formatClockTime(12 * 60)).toBe('12:00 PM');
+    expect(formatClockTime(14 * 60 + 13)).toBe('2:13 PM');
+  });
+});
+
+describe('summarizeObservedTimes', () => {
+  it('returns null with no samples', () => {
+    expect(summarizeObservedTimes([])).toBeNull();
+  });
+
+  it('reports a wide spread as varying, with the typical (IQR) window', () => {
+    // 8:00, 9:00, 10:00, 11:00, 14:00 — spread 6h.
+    const w = summarizeObservedTimes([480, 540, 600, 660, 840])!;
+    expect(w.sample_size).toBe(5);
+    expect(w.earliest).toBe('8:00 AM');
+    expect(w.latest).toBe('2:00 PM');
+    expect(w.median).toBe('10:00 AM');
+    expect(w.typical_window).toBe('9:00 AM - 11:00 AM');
+    expect(w.consistency).toBe('varies');
+  });
+
+  it('reports a tight spread as consistent', () => {
+    const w = summarizeObservedTimes([480, 490, 500, 510])!;
+    expect(w.consistency).toBe('consistent');
+    expect(w.spread_minutes).toBe(30);
   });
 });
 
