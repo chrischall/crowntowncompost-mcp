@@ -43,7 +43,8 @@
     "test:coverage": "vitest run --coverage",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
-    "worker:test": "vitest run --config vitest.workers.config.ts"
+    "worker:test": "vitest run --config vitest.workers.config.ts",
+    "typecheck:worker": "tsc -p tsconfig.worker.json"
   },
   "dependencies": {
     "@chrischall/mcp-utils": "^0.14.0",

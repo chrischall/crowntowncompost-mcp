@@ -2,6 +2,7 @@ import { SELF } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import { createTestHarness } from '@chrischall/mcp-utils/test';
 import { createDirectClient } from '../src/client.js';
+
 import { registerHealthcheckTools } from '../src/tools/healthcheck.js';
 import { registerAccountTools } from '../src/tools/account.js';
 import { registerServiceTools } from '../src/tools/service.js';
@@ -15,13 +16,16 @@ import { registerSupportTools } from '../src/tools/support.js';
 //   1. the OAuth default handler serves discovery + the login page,
 //   2. an unauthenticated `/mcp` request is rejected before any tool code runs,
 //   3. the exact registrar wiring `src/worker.ts` uses registers the full tool
-//      surface under workerd,
-//   4. an outbound request from the per-user client is not broken by a detached
-//      `globalThis.fetch` binding (see the note on that test).
+//      surface under workerd.
 //
 // The full authenticated `/mcp` handshake needs a real OAuth access token minted
 // through the KV-backed grant flow, which would mean a live portal login — out
 // of scope for a hermetic in-process test.
+//
+// Nothing here may reach the network. An earlier revision drove a real request
+// through the client to probe the fetch binding, which sent a live failed-login
+// POST to the production portal on every CI run; see the note at the bottom for
+// why that test could not have worked anyway.
 
 describe('Crown Town Compost connector — OAuth surface', () => {
   it('serves the OAuth authorization-server discovery document', async () => {
@@ -88,22 +92,12 @@ describe('Crown Town Compost connector — tool surface under workerd', () => {
     }
   });
 
-  // Guard for the detached-`globalThis.fetch` trap: workerd requires `fetch` to
-  // be invoked with `this === globalThis`, so a client that stores the global as
-  // a property and calls it detached throws "Illegal invocation" on EVERY
-  // request. Node has no such rule, so the whole node suite passes and
-  // `wrangler deploy` succeeds — it only surfaces when a real fetch runs.
-  // Asserting the failure reason is never an illegal-invocation binding error is
-  // robust even with no network egress in CI (the binding error would throw
-  // before any I/O).
-  it('does not break outbound fetch with a detached this-binding', async () => {
-    const client = createDirectClient({ username: 'u', password: 'p' });
-    let message = '';
-    try {
-      await client.fetchHtml('/accounts/');
-    } catch (e) {
-      message = e instanceof Error ? e.message : String(e);
-    }
-    expect(message).not.toMatch(/illegal invocation/i);
-  });
+  // NOTE on the detached-`globalThis.fetch` trap (a real deployed-connector
+  // failure elsewhere in this fleet): it CANNOT be caught from this suite. The
+  // Workers pool replaces the global `fetch` with its own wrapper — verified
+  // here: `Function.prototype.toString` on it does not report [native code] —
+  // so a detached call that throws "Illegal invocation" against the deployed
+  // runtime resolves normally under Miniflare. A runtime assertion in this file
+  // passes either way, i.e. it is a false green. `tests/transport-binding.test.ts`
+  // guards the code shape instead; see the reasoning there.
 });

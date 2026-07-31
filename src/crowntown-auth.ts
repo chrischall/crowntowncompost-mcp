@@ -41,24 +41,40 @@ export const crowntownAuth: ConnectorAuth<CrownTownProps> = {
     { name: 'password', label: 'Portal password', type: 'password' },
   ],
   async login(fields) {
+    const username = fields.username?.trim() ?? '';
+    const password = fields.password ?? '';
+    // Guard empty fields here. Without this, AuthManager's deferred-config error
+    // ("CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD environment variables are
+    // required") would surface on the connector's login page — stdio wording
+    // that means nothing to someone signing in through claude.ai, who has no
+    // environment variables to set.
+    if (!username || !password) {
+      throw new Error('Enter both your Crown Town Compost portal username (or email) and your password.');
+    }
+
     // Verify the credentials up front by running the real form login. Wrong
     // credentials throw here, and the connector renders the error on the login
     // page. The minted session is discarded — the per-user client logs in again
     // from the stored props.
     const transport = new FetchTransport();
-    const auth = new AuthManager(transport, { username: fields.username, password: fields.password });
+    const auth = new AuthManager(transport, { username, password });
     try {
       await auth.ensureLogin();
     } catch (e) {
+      // Keep McpToolError's `hint` — it carries the actionable half of the
+      // message (e.g. "this is usually transient — retry") and is otherwise
+      // dropped when re-wrapping.
+      const base = e instanceof Error ? e.message : String(e);
+      const hint = typeof (e as { hint?: unknown })?.hint === 'string' ? (e as { hint: string }).hint : '';
+      const raw = hint ? `${base} ${hint}` : base;
       // Never let an upstream body echo the submitted password back onto the
       // login page. `truncateErrorMessage`/`redactSecrets` match secret SHAPES
       // (Bearer, JWT, sk-…) and would NOT catch a plain password, so scrub the
-      // literal value we just sent. Guard the empty needle: ''.split('') would
-      // splice the placeholder between every character.
-      const raw = e instanceof Error ? e.message : String(e);
-      const scrubbed = fields.password ? raw.split(fields.password).join('[redacted]') : raw;
-      throw new Error(scrubbed);
+      // literal value we just sent. The empty needle is already excluded by the
+      // guard above; ''.split('') would splice the placeholder between every
+      // character.
+      throw new Error(raw.split(password).join('[redacted]'));
     }
-    return { username: fields.username, password: fields.password };
+    return { username, password };
   },
 };

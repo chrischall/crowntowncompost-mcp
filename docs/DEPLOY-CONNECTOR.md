@@ -89,12 +89,23 @@ the meantime — use the `*.workers.dev` URL until it self-heals.
   properties when editing `client.ts`.
 - **Detached `fetch`.** `FetchTransport` calls the bare global `fetch(...)`. Never
   rewrite that as `globalThis.fetch` stored on a property and called detached —
-  workerd throws "Illegal invocation" on every request, and only a live request
-  reveals it. `tests/worker.test.ts` guards this.
+  the deployed runtime throws "Illegal invocation" on every request.
+
+  This one cannot be caught by running code before a deploy: Node has no such
+  rule, `wrangler deploy` never invokes fetch, and the **Workers pool substitutes
+  its own `fetch` wrapper for the global**, so a detached call resolves normally
+  under Miniflare. (Verified by mutating the transport to the broken form and
+  watching `worker:test` stay green.) `tests/transport-binding.test.ts` therefore
+  asserts the code *shape* instead, and does fail on the broken form.
 
 ## Testing
 
 ```sh
-npm run worker:test    # Workers pool (Miniflare), against wrangler.jsonc
-npm test               # Node pool; excludes tests/worker.test.ts
+npm test                  # Node pool; excludes tests/worker.test.ts
+npm run typecheck:worker  # type-checks src/worker.ts + src/crowntown-auth.ts,
+                          # which the stdio tsconfig excludes so they stay out
+                          # of dist/ and the npm tarball
+npm run worker:test       # Workers pool (Miniflare), against wrangler.jsonc
 ```
+
+CI runs all three.
