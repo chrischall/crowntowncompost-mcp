@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "crowntowncompost-mcp",
   "display_name": "Crown Town Compost",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Crown Town Compost pickups, invoices, and service skips for Claude — access via natural language",
   "author": {
     "name": "Chris Hall",
