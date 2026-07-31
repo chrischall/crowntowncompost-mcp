@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "crowntowncompost-mcp",
+  "owner": {
+    "name": "Chris Hall",
+    "email": "chris.c.hall@gmail.com"
+  },
+  "metadata": {
+    "description": "MCP server for Crown Town Compost — natural-language access to pickups, invoices, and service skips",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "crowntowncompost-mcp",
+      "displayName": "Crown Town Compost",
+      "source": "./",
+      "description": "MCP server for the Crown Town Compost customer portal — view pickups and invoices, skip a service, and report a missed collection. Signs in server-side with your own portal username and password.",
+      "version": "0.1.0",
+      "author": { "name": "Chris Hall" },
+      "homepage": "https://github.com/chrischall/crowntowncompost-mcp",
+      "repository": "https://github.com/chrischall/crowntowncompost-mcp",
+      "license": "MIT",
+      "keywords": ["compost", "curbside", "pickup", "mcp"],
+      "category": "productivity"
+    }
+  ]
+}

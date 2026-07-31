@@ -1,0 +1,16 @@
+{
+  "name": "crowntowncompost-mcp",
+  "displayName": "Crown Town Compost",
+  "version": "0.1.0",
+  "description": "MCP server for Crown Town Compost — natural-language access to pickups, invoices, and service skips",
+  "author": {
+    "name": "Chris Hall",
+    "email": "chris.c.hall@gmail.com"
+  },
+  "homepage": "https://github.com/chrischall/crowntowncompost-mcp",
+  "repository": "https://github.com/chrischall/crowntowncompost-mcp",
+  "license": "MIT",
+  "keywords": ["compost", "curbside", "pickup", "mcp"],
+  "skills": "./skills/",
+  "mcp": "./.mcp.json"
+}

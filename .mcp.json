@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "crowntowncompost": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "env": {
+        "CROWNTOWN_USERNAME": "${CROWNTOWN_USERNAME}",
+        "CROWNTOWN_PASSWORD": "${CROWNTOWN_PASSWORD}"
+      }
+    }
+  }
+}
