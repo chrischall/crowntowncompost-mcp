@@ -1,3 +1,3 @@
 // Single source of truth for the server version. The marker is what
 // release-please bumps; versionSyncTest asserts it equals package.json.
-export const VERSION = '0.2.0'; // x-release-please-version
+export const VERSION = '0.3.0'; // x-release-please-version
