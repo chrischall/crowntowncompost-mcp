@@ -28,7 +28,7 @@ const SET_OUT_POLICY = {
   guaranteed_window: null,
   set_out_by: '6:00 AM',
   source:
-    'crowntowncompost.com FAQ: "Just make sure your bin is set out at the curb by 6am on your pick-up day. We often start our routes early to beat the heat." Most customers set out the night before.',
+    'crowntowncompost.com FAQ: "Just make sure your bin is set out at the curb by 6am on your pick-up day. We often start our routes early to beat the heat" and "Most customers set them out the night before just to be safe!"',
 } as const;
 
 const norm = (s: string): string => s.replace(/\s+/g, ' ').trim().toLowerCase();
