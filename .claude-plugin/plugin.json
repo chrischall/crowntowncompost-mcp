@@ -10,7 +10,12 @@
   "homepage": "https://github.com/chrischall/crowntowncompost-mcp",
   "repository": "https://github.com/chrischall/crowntowncompost-mcp",
   "license": "MIT",
-  "keywords": ["compost", "curbside", "pickup", "mcp"],
+  "keywords": [
+    "compost",
+    "curbside",
+    "pickup",
+    "mcp"
+  ],
   "skills": "./skills/",
   "mcp": "./.mcp.json"
 }
