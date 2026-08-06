@@ -1,4 +1,0 @@
-# Local-only vars for `npm run worker:dev` (wrangler reads .dev.vars).
-# The connector does NOT read portal credentials from here — each user supplies
-# their own on the connector's OAuth login page, and they are stored encrypted
-# in OAUTH_KV. This file exists for any future Worker-side config.
