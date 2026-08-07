@@ -71,18 +71,6 @@ reports) it says so rather than claiming success.
 Payments are deliberately out of scope — `crowntown_list_invoices` returns the hosted invoice URL for
 you to open in a browser.
 
-## Hosted connector (claude.ai)
-
-There is also a Cloudflare Worker entry point (`src/worker.ts`) that makes this server reachable from
-**claude.ai** — web, desktop, and mobile — rather than only from a local stdio host. It wraps the same
-tools behind an OAuth login page where you enter your own portal credentials.
-
-This works because the portal's auth is a plain server-side form login, with nothing that needs a
-browser or a filesystem. Since the portal issues no refresh token, your credentials are stored
-encrypted so the connector can sign in again when the session expires.
-
-Deploy is manual — see [`docs/DEPLOY-CONNECTOR.md`](docs/DEPLOY-CONNECTOR.md).
-
 ## Without the MCP
 
 The `skills/crowntown-portal` skill does the same things with `curl` in a shell — useful in scripts or
@@ -100,9 +88,6 @@ npm test
 Tests mock the network — no credentials needed and nothing hits the live portal. `tests/server-boot.test.ts`
 spawns the real built artifacts (the npm `bin` and the bundle, the latter without `node_modules`) and runs
 the MCP handshake against them.
-
-`npm run worker:test` runs the connector suite separately, inside the real Workers runtime — `npm test`
-excludes it, since it imports `cloudflare:test` and can't load under Node.
 
 Endpoint shapes are documented in [`docs/CROWNTOWN-API.md`](docs/CROWNTOWN-API.md), including which
 parts are live-verified and which are not.

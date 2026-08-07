@@ -133,8 +133,8 @@ export class CrownTownClient {
 
 /**
  * Build a per-user client from injected credentials — the constructor seam the
- * hosted Cloudflare connector uses. Each call mints its own transport +
- * AuthManager, so concurrent connector sessions never share a cookie jar.
+ * hosted per-user deployment uses. Each call mints its own transport +
+ * AuthManager, so concurrent sessions never share a cookie jar.
  */
 export function createDirectClient(opts: { username?: string; password?: string }): CrownTownClient {
   const transport = new FetchTransport();
@@ -144,7 +144,7 @@ export function createDirectClient(opts: { username?: string; password?: string 
 /**
  * Module-level singleton for the stdio server (deferred-config-error pattern).
  *
- * This constructor must stay PURE — the Worker's module graph loads this file,
+ * This constructor must stay PURE — a module-scope singleton loads this file,
  * and the Workers runtime forbids async I/O, timers, and random-value generation
  * in global scope. `FetchTransport` only stores a timeout and `AuthManager` only
  * reads env vars, so constructing here is safe.
