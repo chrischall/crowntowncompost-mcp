@@ -11,17 +11,15 @@ const TRANSPORT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'tr
 // The trap: workerd requires the global `fetch` to be invoked with a `this` it
 // accepts. Storing it on an object (`this.fetchImpl = globalThis.fetch`) and
 // calling it detached (`this.fetchImpl(url)`) throws "Illegal invocation" on
-// EVERY request in a deployed Worker. Calling the bare global identifier —
+// EVERY request in such a runtime. Calling the bare global identifier —
 // `fetch(url)`, which is what this transport does — is safe.
 //
-// Nothing catches it at runtime before a real deploy:
-//   - Node has no such rule, so the whole Node suite passes.
-//   - `wrangler deploy` succeeds; bundling never invokes fetch.
-//   - The Workers-pool suite CANNOT catch it either: that pool substitutes its
-//     own `fetch` wrapper for the global (it does not report [native code]), so
-//     a detached call resolves normally under Miniflare. A runtime assertion
-//     there passes with the bug present — a false green, confirmed by mutating
-//     the transport to the detached form and watching the suite stay green.
+// Nothing catches it at runtime before a real deploy: Node has no such rule,
+// so the whole Node suite passes, and bundling never invokes fetch. Even a
+// sandboxed test pool substitutes its own `fetch` wrapper for the global (it
+// does not report [native code]), so a detached call resolves normally there
+// too — a runtime assertion passes with the bug present. Hence the static
+// assertion below.
 //
 // So this asserts the one property that actually distinguishes the two forms:
 // the source calls the bare global. It is a shape assertion rather than a
