@@ -144,9 +144,10 @@ export function createDirectClient(opts: { username?: string; password?: string 
 /**
  * Module-level singleton for the stdio server (deferred-config-error pattern).
  *
- * This constructor must stay PURE — a module-scope singleton loads this file,
- * and the Workers runtime forbids async I/O, timers, and random-value generation
- * in global scope. `FetchTransport` only stores a timeout and `AuthManager` only
+ * This constructor must stay PURE. The singleton below is built while the
+ * module graph loads, and sandboxed runtimes forbid async I/O, timers and
+ * random-value generation in global scope — a violation fails startup rather
+ * than a request. `FetchTransport` only stores a timeout and `AuthManager` only
  * reads env vars, so constructing here is safe.
  */
 export const client = new CrownTownClient();
