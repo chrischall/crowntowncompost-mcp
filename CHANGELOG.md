@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.3.0...v0.3.1) (2026-08-07)
+
+
+### Refactor
+
+* **connector:** retire the standalone Cloudflare Worker connector ([#9](https://github.com/chrischall/crowntowncompost-mcp/issues/9)) ([b386958](https://github.com/chrischall/crowntowncompost-mcp/commit/b3869584a771d89d2e1fb2a8188635f525e68fee))
+
+
+### Documentation
+
+* state the fetch-binding rule without naming wrangler ([#14](https://github.com/chrischall/crowntowncompost-mcp/issues/14)) ([5926f3d](https://github.com/chrischall/crowntowncompost-mcp/commit/5926f3d84726b6bb9929a302ad11ba61f587a4f1))
+
 ## [0.3.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.2.0...v0.3.0) (2026-07-31)
 
 
