@@ -1,0 +1,20 @@
+version: 1
+name: Crown Town Compost
+slug: crowntowncompost
+summary: >-
+  Crown Town Compost pickups, invoices, and service skips for Claude —
+  access via natural language
+env:
+  - name: CROWNTOWN_USERNAME
+    required: true
+    help: >-
+      Your portal.crowntowncompost.com username or email address
+  - name: CROWNTOWN_PASSWORD
+    secret: true
+    required: true
+    help: >-
+      Your Crown Town Compost customer-portal password
+egress:
+  allow:
+    # Only hosts the SERVER process actually fetches.
+    - portal.crowntowncompost.com
