@@ -32,7 +32,8 @@
     "skills",
     ".mcp.json",
     "server.json",
-    "manifest.json"
+    "manifest.json",
+    "mint.yaml"
   ],
   "scripts": {
     "build": "tsc && npm run bundle",
