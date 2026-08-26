@@ -8,6 +8,12 @@ const LOGIN_PATH = '/accounts/login/?next=/accounts/';
 export interface AuthOptions {
   username?: string;
   password?: string;
+  /**
+   * A `Cookie`-header value for an already-signed-in portal session
+   * (`CROWNTOWN_SESSION_COOKIE`). Supplied, it is used as-is and the Django
+   * login handshake never runs — so a deployment need not store a password.
+   */
+  sessionCookie?: string;
 }
 
 /** The cookie session the manager mints and hands back to callers: the live jar. */
@@ -19,6 +25,19 @@ interface PortalSession {
 // caches it as *permanent* — every later ensure() rethrows it rather than
 // retrying a login that can never succeed without new config.
 const CONFIG_ERROR_MARKER = '__crowntown_missing_creds__';
+
+/**
+ * Is this the deferred configuration error, rather than a login that failed on
+ * its merits?
+ *
+ * Exported because callers need the distinction to advise a user, and the only
+ * alternative was matching a fragment of the message — which broke the moment
+ * the message gained a second remediation route. The marker is set on every
+ * error this module treats as permanent, so the two never disagree.
+ */
+export function isConfigError(err: unknown): boolean {
+  return err instanceof Error && (err as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] === true;
+}
 
 // The Django portal signals an expired session by redirecting an authed request
 // back to /accounts/login/ (or rendering that login page with a 200). Detect it
@@ -43,17 +62,32 @@ export function extractCsrfInput(html: string): string | null {
 export class AuthManager {
   private readonly username: string | null;
   private readonly password: string | null;
+  private readonly suppliedCookie: string | null;
+  /**
+   * Whether the supplied cookie has already been handed out. It is good for
+   * exactly one session: once the portal has redirected us back to the login
+   * page, that cookie is dead and re-seeding the jar with it would loop.
+   */
+  private suppliedCookieSpent = false;
   private readonly configError: Error | null;
   private readonly session: CookieSessionManager<PortalSession, PortalResponse>;
 
   constructor(private readonly transport: PortalTransport, opts: AuthOptions = {}) {
     const username = opts.username ?? readEnvVar('CROWNTOWN_USERNAME') ?? null;
     const password = opts.password ?? readEnvVar('CROWNTOWN_PASSWORD') ?? null;
+    const sessionCookie = opts.sessionCookie ?? readEnvVar('CROWNTOWN_SESSION_COOKIE') ?? null;
     this.username = username;
     this.password = password;
-    this.configError = username && password ? null : new Error(
-      'CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD environment variables are required',
-    );
+    this.suppliedCookie = sessionCookie;
+    // A supplied cookie is a complete configuration on its own; the login pair
+    // is only needed to MINT one.
+    this.configError =
+      sessionCookie || (username && password)
+        ? null
+        : new Error(
+            'Crown Town Compost is not configured — set CROWNTOWN_SESSION_COOKIE (a signed-in portal ' +
+              'session you already hold), or CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD to log in for one.',
+          );
     this.session = new CookieSessionManager<PortalSession, PortalResponse>({
       login: () => this.doLogin(),
       isExpired: looksUnauthenticated,
@@ -103,6 +137,32 @@ export class AuthManager {
       (this.configError as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] = true;
       throw this.configError;
     }
+
+    // Path 1: the consumer handed us a live session. Seed the jar and spend no
+    // request at all. `absorb` parses Set-Cookie entries, and a Cookie header's
+    // `a=1; b=2` pairs are exactly its leading name=value form, so splitting on
+    // `;` yields one valid entry each.
+    if (this.suppliedCookie && !this.suppliedCookieSpent) {
+      this.suppliedCookieSpent = true;
+      const jar = new CookieJar();
+      jar.absorb(this.suppliedCookie.split(';').map((c) => c.trim()).filter(Boolean));
+      return { jar };
+    }
+
+    // The supplied cookie has been spent and we are back here, which means the
+    // portal rejected it. With no login pair there is nothing to recover with —
+    // say the cookie is stale rather than reporting it as never configured,
+    // which is what an operator who set it on purpose would otherwise be told.
+    if (this.suppliedCookieSpent && !(this.username && this.password)) {
+      const stale = new Error(
+        'The supplied CROWNTOWN_SESSION_COOKIE is no longer valid — the portal redirected back to the ' +
+          'login page. Supply a fresh session cookie, or set CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD ' +
+          'so a new session can be minted automatically.',
+      );
+      (stale as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] = true;
+      throw stale;
+    }
+
     const jar = new CookieJar();
 
     // 1. GET the login page to obtain the csrftoken cookie + the hidden form token.
