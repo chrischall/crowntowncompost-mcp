@@ -2,6 +2,15 @@ import { readEnvVar, McpToolError, CookieJar } from '@chrischall/mcp-utils';
 import { CookieSessionManager } from '@chrischall/mcp-utils/session';
 import { parse } from 'node-html-parser';
 import { PORTAL_ORIGIN, type PortalResponse, type PortalTransport } from './transport.js';
+import {
+  createSessionCache,
+  jarFromHeader,
+  reportCacheWriteFailure,
+} from './session-cache.js';
+import type {
+  PersistedCookieSession,
+  SyncStatePersistence,
+} from '@chrischall/mcp-utils/session';
 
 const LOGIN_PATH = '/accounts/login/?next=/accounts/';
 
@@ -88,8 +97,35 @@ export class AuthManager {
             'Crown Town Compost is not configured — set CROWNTOWN_SESSION_COOKIE (a signed-in portal ' +
               'session you already hold), or CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD to log in for one.',
           );
+    // The live session holds a CookieJar, which cannot be JSON round-tripped —
+    // so the cache stores the jar's rendered Cookie header and this view maps
+    // between the two. Kept here rather than in session-cache.ts so that module
+    // stays free of the PortalSession type and the import cycle it would bring.
+    const cache = createSessionCache({ username, password, sessionCookie });
+    const persistence: SyncStatePersistence<PersistedCookieSession<PortalSession>> | null =
+      cache === null
+        ? null
+        : {
+            load: () => {
+              const rec = cache.load();
+              if (rec === null) return null;
+              return {
+                session: { jar: jarFromHeader(rec.session.cookieHeader) },
+                sessionAt: rec.sessionAt,
+              };
+            },
+            save: (rec) =>
+              cache.save({
+                session: { cookieHeader: rec.session.jar.header() },
+                sessionAt: rec.sessionAt,
+              }),
+            clear: () => cache.clear(),
+          };
+
     this.session = new CookieSessionManager<PortalSession, PortalResponse>({
       login: () => this.doLogin(),
+      persistence: persistence ?? undefined,
+      onPersistError: reportCacheWriteFailure,
       isExpired: looksUnauthenticated,
       isPermanentError: (err) =>
         err instanceof Error && (err as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] === true,

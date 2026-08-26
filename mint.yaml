@@ -23,6 +23,28 @@ env:
     help: >-
       Your Crown Town Compost customer-portal password. Needed only if you are
       not supplying CROWNTOWN_SESSION_COOKIE.
+  - name: CROWNTOWN_SESSION_CACHE
+    required: false
+    help: >-
+      Set to false to disable the on-disk session cache and log in on every
+      process start. Defaults to enabled.
+  - name: CROWNTOWN_SESSION_FILE
+    required: false
+    help: >-
+      Absolute path for the session cache file. Defaults to
+      $MCP_DATA_DIR/.crowntowncompost-mcp/session.json.
+
+state:
+  dataDir: true
+  reason: >-
+    Caches the signed-in portal session at
+    $MCP_DATA_DIR/.crowntowncompost-mcp/session.json (0600). Without it every
+    cold start re-runs the Django CSRF-then-POST login handshake, and a hosted
+    child idles out after ten minutes, so that is most starts. Only the cookie
+    jar is written — the username, password and any supplied
+    CROWNTOWN_SESSION_COOKIE stay in the environment, and the record is bound to
+    a salted digest of them so replacing any of them discards it.
+
 egress:
   allow:
     # Only hosts the SERVER process actually fetches.
