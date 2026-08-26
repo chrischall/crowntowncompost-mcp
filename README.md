@@ -10,8 +10,9 @@ natural language.
 
 `crowntowncompost.com` is a marketing site with no customer data. Everything lives at
 **`portal.crowntowncompost.com`**, a Django app (a white-labeled **StopSuite** hauler platform).
-This server signs in server-side with **your own portal username and password** — a normal form
-login that returns a session cookie — and reads the same pages and JSON endpoints the website uses.
+This server authenticates server-side with **a session cookie you already hold**, or with **your own
+portal username and password** — a normal form login that returns one — and reads the same pages and
+JSON endpoints the website uses.
 No browser extension, no bot-wall workaround, no third-party service in the middle.
 
 ## Install

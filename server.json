@@ -18,7 +18,7 @@
       "environmentVariables": [
         {
           "name": "CROWNTOWN_SESSION_COOKIE",
-          "description": "A Cookie header from an already-signed-in portal session (\"sessionid=...; csrftoken=...\"). Supply this and no password is needed \u2014 the login is skipped entirely.",
+          "description": "A Cookie header from an already-signed-in portal session (\"sessionid=...; csrftoken=...\"). Supply this and no password is needed — the login is skipped entirely.",
           "isRequired": false,
           "format": "string",
           "isSecret": true

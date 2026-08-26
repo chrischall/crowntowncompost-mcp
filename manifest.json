@@ -4,7 +4,7 @@
   "name": "crowntowncompost-mcp",
   "display_name": "Crown Town Compost",
   "version": "0.3.1",
-  "description": "Crown Town Compost pickups, invoices, and service skips for Claude \u2014 access via natural language",
+  "description": "Crown Town Compost pickups, invoices, and service skips for Claude — access via natural language",
   "author": {
     "name": "Chris Hall",
     "email": "chris.c.hall@gmail.com",
@@ -43,7 +43,7 @@
     "crowntown_session_cookie": {
       "type": "string",
       "title": "Portal Session Cookie",
-      "description": "A Cookie header from an already-signed-in portal session (e.g. \"sessionid=\u2026; csrftoken=\u2026\"). Supply this and no password is needed \u2014 the login is skipped entirely.",
+      "description": "A Cookie header from an already-signed-in portal session (e.g. \"sessionid=…; csrftoken=…\"). Supply this and no password is needed — the login is skipped entirely.",
       "required": false,
       "sensitive": true
     },
