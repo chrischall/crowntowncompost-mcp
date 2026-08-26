@@ -2,8 +2,11 @@
   "mcpServers": {
     "crowntowncompost": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+      ],
       "env": {
+        "CROWNTOWN_SESSION_COOKIE": "${CROWNTOWN_SESSION_COOKIE}",
         "CROWNTOWN_USERNAME": "${CROWNTOWN_USERNAME}",
         "CROWNTOWN_PASSWORD": "${CROWNTOWN_PASSWORD}"
       }
