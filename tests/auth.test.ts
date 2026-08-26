@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AuthManager, looksUnauthenticated, extractCsrfInput } from '../src/auth.js';
 import type { PortalRequest, PortalResponse, PortalTransport } from '../src/transport.js';
 import { LOGIN_PAGE_HTML } from './fixtures/pages.js';
@@ -173,5 +176,49 @@ describe('a supplied session cookie', () => {
     const err = await auth.ensureLogin().catch((e: Error) => e);
     expect(String(err)).toMatch(/CROWNTOWN_SESSION_COOKIE/);
     expect(String(err)).toMatch(/expired|no longer valid|stale/i);
+  });
+});
+
+describe('AuthManager — session cache', () => {
+  it('a second manager restores the jar and skips the Django handshake', async () => {
+    // End to end through the adapter: the live session holds a CookieJar, the
+    // cache holds its rendered header. This is what proves the mapping works in
+    // both directions rather than only in the unit test.
+    const dir = mkdtempSync(join(tmpdir(), 'ctc-hit-'));
+    try {
+      vi.stubEnv('CROWNTOWN_SESSION_CACHE', 'true');
+      vi.stubEnv('CROWNTOWN_SESSION_FILE', join(dir, 'session.json'));
+
+      const first = loginOkTransport();
+      await new AuthManager(first, { username: 'u@example.com', password: 'pw' }).ensureLogin();
+      expect(first.requests.length).toBeGreaterThan(0);
+
+      const second = loginOkTransport();
+      await new AuthManager(second, { username: 'u@example.com', password: 'pw' }).ensureLogin();
+      // No CSRF fetch and no POST: the whole two-step handshake was skipped.
+      expect(second.requests).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('binds to the credentials the manager was constructed with', async () => {
+    // AuthManager takes credentials via opts as well as the environment.
+    // Binding to the env pair would mean a client built with explicit
+    // credentials either never caches or reads a record keyed to someone else.
+    const dir = mkdtempSync(join(tmpdir(), 'ctc-bind-'));
+    try {
+      vi.stubEnv('CROWNTOWN_SESSION_CACHE', 'true');
+      vi.stubEnv('CROWNTOWN_SESSION_FILE', join(dir, 'session.json'));
+
+      const first = loginOkTransport();
+      await new AuthManager(first, { username: 'a@example.com', password: 'pw' }).ensureLogin();
+
+      const other = loginOkTransport();
+      await new AuthManager(other, { username: 'b@example.com', password: 'pw' }).ensureLogin();
+      expect(other.requests.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
