@@ -33,24 +33,32 @@
         "${__dirname}/dist/bundle.js"
       ],
       "env": {
+        "CROWNTOWN_SESSION_COOKIE": "${user_config.crowntown_session_cookie}",
         "CROWNTOWN_USERNAME": "${user_config.crowntown_username}",
         "CROWNTOWN_PASSWORD": "${user_config.crowntown_password}"
       }
     }
   },
   "user_config": {
+    "crowntown_session_cookie": {
+      "type": "string",
+      "title": "Portal Session Cookie",
+      "description": "A Cookie header from an already-signed-in portal session (e.g. \"sessionid=…; csrftoken=…\"). Supply this and no password is needed — the login is skipped entirely.",
+      "required": false,
+      "sensitive": true
+    },
     "crowntown_username": {
       "type": "string",
       "title": "Portal Username",
-      "description": "Your portal.crowntowncompost.com username or email address",
-      "required": true,
+      "description": "Your portal.crowntowncompost.com username or email address. Needed only if you are not supplying a session cookie above.",
+      "required": false,
       "sensitive": false
     },
     "crowntown_password": {
       "type": "string",
       "title": "Portal Password",
-      "description": "Your Crown Town Compost customer-portal password",
-      "required": true,
+      "description": "Your Crown Town Compost customer-portal password. Needed only if you are not supplying a session cookie above.",
+      "required": false,
       "sensitive": true
     }
   },

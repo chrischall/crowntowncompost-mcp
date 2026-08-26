@@ -10,8 +10,9 @@ natural language.
 
 `crowntowncompost.com` is a marketing site with no customer data. Everything lives at
 **`portal.crowntowncompost.com`**, a Django app (a white-labeled **StopSuite** hauler platform).
-This server signs in server-side with **your own portal username and password** — a normal form
-login that returns a session cookie — and reads the same pages and JSON endpoints the website uses.
+This server authenticates server-side with **a session cookie you already hold**, or with **your own
+portal username and password** — a normal form login that returns one — and reads the same pages and
+JSON endpoints the website uses.
 No browser extension, no bot-wall workaround, no third-party service in the middle.
 
 ## Install
@@ -20,7 +21,9 @@ No browser extension, no bot-wall workaround, no third-party service in the midd
 npm install -g crowntowncompost-mcp
 ```
 
-Then add it to your MCP host with your portal credentials:
+Then add it to your MCP host. Two configurations work — supply **either** a
+session cookie you already hold (nothing else needed), **or** the login pair so
+the server can mint one:
 
 ```json
 {
@@ -36,6 +39,16 @@ Then add it to your MCP host with your portal credentials:
   }
 }
 ```
+
+To use a session cookie instead, set `CROWNTOWN_SESSION_COOKIE` to a `Cookie`
+header value from a signed-in browser session (`sessionid=…; csrftoken=…`) and
+leave the username and password unset. The portal login is then never run, and
+no password is stored anywhere.
+
+Setting both is also valid, and is the most robust configuration: the cookie is
+used first, and when the portal eventually expires it the login quietly mints a
+replacement. With a cookie alone, an expired session is reported as expired —
+the server says so plainly rather than claiming nothing is configured.
 
 Locally you can instead copy `.env.example` to `.env`. The server boots without credentials (so a
 host's install-time probe succeeds); the configuration error surfaces on the first tool call.

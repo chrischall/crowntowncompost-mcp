@@ -350,7 +350,10 @@ describe('crowntown_healthcheck', () => {
       const out = await call(harness, 'crowntown_healthcheck');
       expect(out.ok).toBe(false);
       expect(out.authenticated).toBe(false);
-      expect(out.hint).toMatch(/Set CROWNTOWN_USERNAME/);
+      // Both routes must be named: someone who deliberately configured a
+      // session cookie is not helped by being told only about the password.
+      expect(out.hint).toMatch(/CROWNTOWN_SESSION_COOKIE/);
+      expect(out.hint).toMatch(/CROWNTOWN_USERNAME/);
     } finally {
       vi.unstubAllEnvs();
     }

@@ -5,15 +5,24 @@ summary: >-
   Crown Town Compost pickups, invoices, and service skips for Claude —
   access via natural language
 env:
-  - name: CROWNTOWN_USERNAME
-    required: true
+  - name: CROWNTOWN_SESSION_COOKIE
+    secret: true
+    required: false
     help: >-
-      Your portal.crowntowncompost.com username or email address
+      A Cookie header from an already-signed-in portal session
+      ("sessionid=...; csrftoken=..."). Supply this and no password is needed —
+      the Django login is skipped entirely.
+  - name: CROWNTOWN_USERNAME
+    required: false
+    help: >-
+      Your portal.crowntowncompost.com username or email address. Needed only
+      if you are not supplying CROWNTOWN_SESSION_COOKIE.
   - name: CROWNTOWN_PASSWORD
     secret: true
-    required: true
+    required: false
     help: >-
-      Your Crown Town Compost customer-portal password
+      Your Crown Town Compost customer-portal password. Needed only if you are
+      not supplying CROWNTOWN_SESSION_COOKIE.
 egress:
   allow:
     # Only hosts the SERVER process actually fetches.

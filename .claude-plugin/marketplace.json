@@ -14,7 +14,7 @@
       "name": "crowntowncompost-mcp",
       "displayName": "Crown Town Compost",
       "source": "./",
-      "description": "MCP server for the Crown Town Compost customer portal — view pickups and invoices, skip a service, and report a missed collection. Signs in server-side with your own portal username and password.",
+      "description": "MCP server for the Crown Town Compost customer portal — view pickups and invoices, skip a service, and report a missed collection. Authenticates server-side with a session cookie you already hold, or your own portal username and password.",
       "version": "0.3.1",
       "author": {
         "name": "Chris Hall"

@@ -120,3 +120,58 @@ describe('AuthManager login', () => {
     expect(t.requests.filter((r) => r.method === 'POST' && r.path.includes('/accounts/login/'))).toHaveLength(1);
   });
 });
+
+/**
+ * Path 1 of the credential ladder: a session cookie the consumer already holds.
+ *
+ * Until now the only configuration this server accepted was a username and a
+ * password — the broadest credential there is, handed over so the server could
+ * mint the narrow one itself. A supplied `CROWNTOWN_SESSION_COOKIE` skips the
+ * Django login handshake entirely, and a deployment that supplies one need not
+ * store a password at all.
+ */
+describe('a supplied session cookie', () => {
+  it('is used as-is, with no login handshake at all', async () => {
+    const t = loginOkTransport();
+    const auth = new AuthManager(t, { sessionCookie: 'sessionid=GIVEN; csrftoken=CT' });
+    await auth.ensureLogin();
+
+    // No GET of the login page, no POST of credentials — nothing was spent.
+    expect(t.requests).toHaveLength(0);
+    expect(auth.cookieHeader()).toContain('sessionid=GIVEN');
+    expect(auth.csrfToken()).toBe('CT');
+    expect(auth.hasSession()).toBe(true);
+  });
+
+  it('needs no username or password', async () => {
+    const auth = new AuthManager(loginOkTransport(), { sessionCookie: 'sessionid=GIVEN' });
+    await expect(auth.ensureLogin()).resolves.toBeUndefined();
+  });
+
+  it('falls back to the login when it goes stale AND a password is configured', async () => {
+    const t = loginOkTransport();
+    const auth = new AuthManager(t, { sessionCookie: 'sessionid=STALE', username: 'u', password: 'p' });
+    await auth.ensureLogin();
+    expect(t.requests).toHaveLength(0);
+
+    // The portal redirected us back to the login page: the supplied cookie is
+    // dead. There IS a password, so recovery should be silent.
+    auth.invalidate();
+    await auth.ensureLogin();
+    expect(t.requests.some((r) => r.method === 'POST')).toBe(true);
+    expect(auth.cookieHeader()).toContain('sessionid=SESSION123');
+  });
+
+  it('says the cookie went stale rather than that nothing is configured', async () => {
+    // No password to recover with. The old message would have been
+    // "CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD ... are required", which is
+    // both untrue and useless to someone who configured a cookie on purpose.
+    const auth = new AuthManager(loginOkTransport(), { sessionCookie: 'sessionid=STALE' });
+    await auth.ensureLogin();
+    auth.invalidate();
+
+    const err = await auth.ensureLogin().catch((e: Error) => e);
+    expect(String(err)).toMatch(/CROWNTOWN_SESSION_COOKIE/);
+    expect(String(err)).toMatch(/expired|no longer valid|stale/i);
+  });
+});

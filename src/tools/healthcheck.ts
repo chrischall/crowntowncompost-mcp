@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, messageOf } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard } from '../parse.js';
+import { isConfigError } from '../auth.js';
 
 export function registerHealthcheckTools(server: McpServer, client: CrownTownClient): void {
   server.registerTool(
@@ -28,13 +29,16 @@ export function registerHealthcheckTools(server: McpServer, client: CrownTownCli
         });
       } catch (e) {
         const msg = messageOf(e);
-        const noCreds = /environment variables are required/.test(msg);
+        // Ask the module, don't pattern-match its prose: the config error names
+        // its own remediation (which route, which variables), and there is now
+        // more than one route for it to name.
+        const noCreds = isConfigError(e);
         return textResult({
           ok: false,
           authenticated: false,
           error: msg,
           hint: noCreds
-            ? 'Set CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD (in .env or the MCP host env), then retry.'
+            ? `${msg} Set it in .env or the MCP host env, then retry.`
             : 'Login or fetch failed — verify your portal.crowntowncompost.com username/email and password are correct.',
         });
       }
