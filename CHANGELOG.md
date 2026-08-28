@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.3.1...v0.4.0) (2026-08-28)
+
+
+### Features
+
+* **auth:** accept a supplied session cookie via CROWNTOWN_SESSION_COOKIE ([#24](https://github.com/chrischall/crowntowncompost-mcp/issues/24)) ([e45b5f2](https://github.com/chrischall/crowntowncompost-mcp/commit/e45b5f28670d8c4397ea6efe602279c30ff6a47a))
+* cache the signed-in portal session so a restart skips the login ([#28](https://github.com/chrischall/crowntowncompost-mcp/issues/28)) ([daa5e22](https://github.com/chrischall/crowntowncompost-mcp/commit/daa5e229f6626c6aae429736b1341ac7db76f544))
+
+
+### Documentation
+
+* list the cache env vars in server.json and .env.example ([#30](https://github.com/chrischall/crowntowncompost-mcp/issues/30)) ([3d04bd0](https://github.com/chrischall/crowntowncompost-mcp/commit/3d04bd0e6e408609afc3cfb62e8e26b96389b4cd))
+
 ## [0.3.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.3.0...v0.3.1) (2026-08-07)
 
 
