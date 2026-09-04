@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, messageOf } from '@chrischall/mcp-utils';
+import { messageOf, minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard } from '../parse.js';
 import { isConfigError } from '../auth.js';
@@ -17,7 +17,7 @@ export function registerHealthcheckTools(server: McpServer, client: CrownTownCli
     async () => {
       try {
         const dash = parseDashboard(await client.fetchHtml('/accounts/'));
-        return textResult({
+        return minifiedResult({
           ok: true,
           authenticated: true,
           account_status: dash.account_status,
@@ -33,7 +33,7 @@ export function registerHealthcheckTools(server: McpServer, client: CrownTownCli
         // its own remediation (which route, which variables), and there is now
         // more than one route for it to name.
         const noCreds = isConfigError(e);
-        return textResult({
+        return minifiedResult({
           ok: false,
           authenticated: false,
           error: msg,
