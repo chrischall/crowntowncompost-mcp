@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard, parsePortalTime, parseSkippableServices, summarizeObservedTimes } from '../parse.js';
 
@@ -82,7 +82,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
         address: r.address,
         nickname: r.nickname || undefined,
       }));
-      return textResult({
+      return minifiedResult({
         page: res.meta?.page,
         pages: res.meta?.pages,
         per_page: res.meta?.perpage,
@@ -103,7 +103,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
     },
     async () => {
       const services = parseSkippableServices(await client.fetchHtml('/accounts/service-calendar/'));
-      return textResult({
+      return minifiedResult({
         count: services.length,
         note: 'action="skip" means the day is currently scheduled (calling skip will skip it); action="unskip" means it is already skipped.',
         services,
@@ -189,7 +189,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
         };
       });
 
-      return textResult({
+      return minifiedResult({
         next_service: dash.next_service,
         addresses,
         set_out_policy: SET_OUT_POLICY,
@@ -217,7 +217,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
     },
     async ({ rid, clid, action, confirm }) => {
       if (confirm !== true) {
-        return textResult({
+        return minifiedResult({
           preview: true,
           action: 'skip_service',
           note: 'DRY RUN — nothing was sent. Re-run with confirm: true to perform this change.',
@@ -234,7 +234,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       const match = after.find((s) => s.rid === rid && s.clid === clid);
       const expected = action === 'skip' ? 'unskip' : 'skip';
       const verified = match ? match.action === expected : false;
-      return textResult({
+      return minifiedResult({
         submitted: true,
         verified,
         status: res.status,

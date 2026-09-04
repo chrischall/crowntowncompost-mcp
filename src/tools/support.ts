@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 
 const MISSED_PICKUP_PATH = '/accounts/report-missed-pickup/';
@@ -22,7 +22,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
     },
     async ({ date, comment, confirm }) => {
       if (confirm !== true) {
-        return textResult({
+        return minifiedResult({
           preview: true,
           action: 'report_missed_pickup',
           note: 'DRY RUN — nothing was sent. Re-run with confirm: true to submit the report (this notifies staff).',
@@ -32,7 +32,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       const body = new URLSearchParams({ date, comment }).toString();
       const res = await client.write(MISSED_PICKUP_PATH, body);
       // The portal 302s on submit; there is no per-report re-read to confirm.
-      return textResult({
+      return minifiedResult({
         submitted: true,
         verified: false,
         status: res.status,
@@ -61,7 +61,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       if (email) params.set('email', email);
       if (phone) params.set('phone', phone);
       if (confirm !== true) {
-        return textResult({
+        return minifiedResult({
           preview: true,
           action: 'contact_support',
           note: 'DRY RUN — nothing was sent. Re-run with confirm: true to send this message to support.',
@@ -69,7 +69,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
         });
       }
       const res = await client.write(SUPPORT_PATH, params.toString());
-      return textResult({
+      return minifiedResult({
         submitted: true,
         verified: false,
         status: res.status,

@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 
 /** A row from POST /accounts/billing-history/api/. */
@@ -50,7 +50,7 @@ export function registerBillingTools(server: McpServer, client: CrownTownClient)
         hosted_invoice_url: r.hosted_invoice_url || undefined,
       }));
       if (payable_only) invoices = invoices.filter((i) => i.is_payable);
-      return textResult({
+      return minifiedResult({
         page: res.meta?.page,
         pages: res.meta?.pages,
         per_page: res.meta?.perpage,

@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { viewArg, viewResponse } from '../view.js';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard, parseImpact, parseAccountDetails, type AccountDetails } from '../parse.js';
 
@@ -39,7 +40,7 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
       } catch {
         /* impact is a nice-to-have; the dashboard is still useful without it */
       }
-      return textResult({ ...dash, environmental_impact: impact });
+      return minifiedResult({ ...dash, environmental_impact: impact });
     },
   );
 
@@ -50,11 +51,12 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
       description:
         'Get your account contact details (first name, last name, phone) and notification preferences (email reminders, service notifications). Read-only — use crowntown_update_account to change them.',
       annotations: toolAnnotations({ title: 'Get account details', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {},
+      inputSchema: {
+        view: viewArg(),},
     },
-    async () => {
+    async ({ view }) => {
       const details = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
-      return textResult(details);
+      return viewResponse(view, details);
     },
   );
 
@@ -77,12 +79,12 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
     async ({ confirm, ...changes }) => {
       const provided = Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== undefined)) as Partial<AccountDetails>;
       if (Object.keys(provided).length === 0) {
-        return textResult({ error: 'Specify at least one field to change (first_name, last_name, phone, send_email_reminders, service_notifications).' });
+        return minifiedResult({ error: 'Specify at least one field to change (first_name, last_name, phone, send_email_reminders, service_notifications).' });
       }
       const current = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
       const { body, next } = buildUpdateBody(current, provided);
       if (confirm !== true) {
-        return textResult({
+        return minifiedResult({
           preview: true,
           action: 'update_account',
           note: 'DRY RUN — nothing was sent. Re-run with confirm: true to save.',
@@ -99,7 +101,7 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
         after.phone === next.phone &&
         after.send_email_reminders === next.send_email_reminders &&
         after.service_notifications === next.service_notifications;
-      return textResult({
+      return minifiedResult({
         updated: verified,
         verified,
         status: res.status,
