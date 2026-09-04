@@ -2,7 +2,7 @@
   "name": "crowntowncompost-mcp",
   "version": "0.4.0",
   "mcpName": "io.github.chrischall/crowntowncompost-mcp",
-  "description": "Crown Town Compost customer-portal MCP server for Claude \u2014 developed and maintained by AI (Claude Code)",
+  "description": "Crown Town Compost customer-portal MCP server for Claude — developed and maintained by AI (Claude Code)",
   "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
   "repository": {
     "type": "git",
