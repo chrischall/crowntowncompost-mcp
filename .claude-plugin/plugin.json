@@ -1,7 +1,7 @@
 {
   "name": "crowntowncompost-mcp",
   "displayName": "Crown Town Compost",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "MCP server for Crown Town Compost — natural-language access to pickups, invoices, and service skips",
   "author": {
     "name": "Chris Hall",
