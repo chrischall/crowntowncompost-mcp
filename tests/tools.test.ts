@@ -250,6 +250,36 @@ describe('crowntown_get_dashboard', () => {
   });
 });
 
+describe('crowntown_get_account', () => {
+  const details = { first_name: 'Test', last_name: 'User', phone: '555-555-5555', send_email_reminders: false, service_notifications: true };
+
+  it('returns the parsed contact details and preferences', async () => {
+    const { harness: h, transport } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
+    const out = await call(h, 'crowntown_get_account');
+    expect(out).toEqual(details);
+    // Read-only: reading the form must never POST it back.
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  // The two rungs agree HERE, and that is a fact about this payload rather
+  // than about `view`. AccountDetails is five scalars with no image or avatar
+  // among them, so compact's media strip has nothing to take. The rung
+  // machinery is exercised on a payload that DOES carry media in
+  // tests/view.test.ts; what matters at this call site is that asking for
+  // either rung still returns the record whole.
+  it('returns the same record on compact and full — the payload carries no media', async () => {
+    const { harness: h } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
+    expect(await call(h, 'crowntown_get_account', { view: 'compact' })).toEqual(details);
+    expect(await call(h, 'crowntown_get_account', { view: 'full' })).toEqual(details);
+  });
+
+  it('rejects a rung the server does not honour', async () => {
+    const { harness: h } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
+    const out = await h.callTool('crowntown_get_account', { view: 'raw' });
+    expect(out.isError).toBe(true);
+  });
+});
+
 describe('crowntown_update_account', () => {
   it('requires at least one field to change', async () => {
     const { harness: h } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
