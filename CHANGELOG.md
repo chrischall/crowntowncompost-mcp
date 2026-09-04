@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.4.0...v0.5.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** compact by default — strip media URLs, and minify every response ([#44](https://github.com/chrischall/crowntowncompost-mcp/issues/44)) ([59bbd17](https://github.com/chrischall/crowntowncompost-mcp/commit/59bbd17e50c8698e34cfb72830b282e50ff43286))
+
+
+### Bug Fixes
+
+* **build:** restore the literal em dash in the package description ([#47](https://github.com/chrischall/crowntowncompost-mcp/issues/47)) ([c97daa8](https://github.com/chrischall/crowntowncompost-mcp/commit/c97daa888eddb5f0ee8c4f5cde515875bc83d7be))
+* **deps:** pick up @chrischall/mcp-utils 0.23.2 ([#49](https://github.com/chrischall/crowntowncompost-mcp/issues/49)) ([03b9959](https://github.com/chrischall/crowntowncompost-mcp/commit/03b99591ef072bffb6371efdeb615c35847cae8f))
+
 ## [0.4.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.3.1...v0.4.0) (2026-08-28)
 
 
