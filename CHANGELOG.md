@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.0...v0.5.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **deps:** @chrischall/mcp-utils 0.26.1 ([#58](https://github.com/chrischall/crowntowncompost-mcp/issues/58)) ([0a51a32](https://github.com/chrischall/crowntowncompost-mcp/commit/0a51a32f3b2a293740a1f7ff78f54ae37775c00e))
+* **deps:** bump hono from 4.13.0 to 4.13.7 ([#56](https://github.com/chrischall/crowntowncompost-mcp/issues/56)) ([c8875e9](https://github.com/chrischall/crowntowncompost-mcp/commit/c8875e9d92d0aef3e2299a17099bc0ff17377c75))
+
 ## [0.5.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.4.0...v0.5.0) (2026-09-04)
 
 
