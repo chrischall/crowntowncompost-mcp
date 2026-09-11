@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.1...v0.5.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **deps:** bump node-html-parser in the production-dependencies group ([#61](https://github.com/chrischall/crowntowncompost-mcp/issues/61)) ([71b52f7](https://github.com/chrischall/crowntowncompost-mcp/commit/71b52f7ac81f9d15bbd55d9e8ad105fa23a01483))
+
 ## [0.5.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.0...v0.5.1) (2026-09-10)
 
 
