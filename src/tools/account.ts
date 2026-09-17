@@ -1,20 +1,20 @@
-import type { McpServer } from "@modelcontextprotocol/server";
-import { z } from "zod";
+import type { McpServer } from '@modelcontextprotocol/server';
+import { z } from 'zod';
 import {
   minifiedResult,
   schemaConfirm,
   toolAnnotations,
-} from "@chrischall/mcp-utils";
-import { viewArg, viewResponse } from "../view.js";
-import type { CrownTownClient } from "../client.js";
+} from '@chrischall/mcp-utils';
+import { viewArg, viewResponse } from '../view.js';
+import type { CrownTownClient } from '../client.js';
 import {
   parseDashboard,
   parseImpact,
   parseAccountDetails,
   type AccountDetails,
-} from "../parse.js";
+} from '../parse.js';
 
-const UPDATE_PATH = "/accounts/update/";
+const UPDATE_PATH = '/accounts/update/';
 
 /** Build the update form body from current values overlaid with the requested changes. */
 export function buildUpdateBody(
@@ -23,13 +23,13 @@ export function buildUpdateBody(
 ): { body: string; next: AccountDetails } {
   const next: AccountDetails = { ...current, ...changes };
   const params = new URLSearchParams();
-  params.set("first_name", next.first_name);
-  params.set("last_name", next.last_name);
-  params.set("phone", next.phone);
+  params.set('first_name', next.first_name);
+  params.set('last_name', next.last_name);
+  params.set('phone', next.phone);
   // Django BooleanField checkboxes carry no value attribute, so they submit "on"
   // when checked and are simply omitted when unchecked (the browser's behaviour).
-  if (next.send_email_reminders) params.set("send_email_reminders", "on");
-  if (next.service_notifications) params.set("service_notifications", "on");
+  if (next.send_email_reminders) params.set('send_email_reminders', 'on');
+  if (next.service_notifications) params.set('service_notifications', 'on');
   return { body: params.toString(), next };
 }
 
@@ -38,13 +38,13 @@ export function registerAccountTools(
   client: CrownTownClient,
 ): void {
   server.registerTool(
-    "crowntown_get_dashboard",
+    'crowntown_get_dashboard',
     {
-      title: "Get account dashboard summary",
+      title: 'Get account dashboard summary',
       description:
-        "Get your Crown Town Compost dashboard: account status, active subscription (plan, price, renewal date), next service date, service address(es) and their pickup day(s), and your composting environmental impact (lbs diverted, seedlings, miles offset, gallons of gas). Read-only.",
+        'Get your Crown Town Compost dashboard: account status, active subscription (plan, price, renewal date), next service date, service address(es) and their pickup day(s), and your composting environmental impact (lbs diverted, seedlings, miles offset, gallons of gas). Read-only.',
       annotations: toolAnnotations({
-        title: "Get dashboard summary",
+        title: 'Get dashboard summary',
         readOnly: true,
         idempotent: true,
         openWorld: true,
@@ -52,12 +52,12 @@ export function registerAccountTools(
       inputSchema: z.object({}),
     },
     async () => {
-      const dash = parseDashboard(await client.fetchHtml("/accounts/"));
+      const dash = parseDashboard(await client.fetchHtml('/accounts/'));
       // Environmental-impact numbers load from a separate htmx fragment.
       let impact = null;
       try {
         impact = parseImpact(
-          await client.fetchHtml("/accounts/impact-statistics/"),
+          await client.fetchHtml('/accounts/impact-statistics/'),
         );
       } catch {
         /* impact is a nice-to-have; the dashboard is still useful without it */
@@ -67,13 +67,13 @@ export function registerAccountTools(
   );
 
   server.registerTool(
-    "crowntown_get_account",
+    'crowntown_get_account',
     {
-      title: "Get account contact details",
+      title: 'Get account contact details',
       description:
-        "Get your account contact details (first name, last name, phone) and notification preferences (email reminders, service notifications). Read-only — use crowntown_update_account to change them.",
+        'Get your account contact details (first name, last name, phone) and notification preferences (email reminders, service notifications). Read-only — use crowntown_update_account to change them.',
       annotations: toolAnnotations({
-        title: "Get account details",
+        title: 'Get account details',
         readOnly: true,
         idempotent: true,
         openWorld: true,
@@ -89,28 +89,28 @@ export function registerAccountTools(
   );
 
   server.registerTool(
-    "crowntown_update_account",
+    'crowntown_update_account',
     {
-      title: "Update account contact details / preferences",
+      title: 'Update account contact details / preferences',
       description:
-        "Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. Without confirm:true this is a DRY RUN showing the resulting state.",
+        'Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. Without confirm:true this is a DRY RUN showing the resulting state.',
       annotations: toolAnnotations({
-        title: "Update account details",
+        title: 'Update account details',
         readOnly: false,
         openWorld: true,
       }),
       inputSchema: z.object({
-        first_name: z.string().min(1).optional().describe("New first name."),
-        last_name: z.string().min(1).optional().describe("New last name."),
-        phone: z.string().min(1).optional().describe("New phone number."),
+        first_name: z.string().min(1).optional().describe('New first name.'),
+        last_name: z.string().min(1).optional().describe('New last name.'),
+        phone: z.string().min(1).optional().describe('New phone number.'),
         send_email_reminders: z
           .boolean()
           .optional()
-          .describe("Toggle email pickup reminders."),
+          .describe('Toggle email pickup reminders.'),
         service_notifications: z
           .boolean()
           .optional()
-          .describe("Toggle service notifications."),
+          .describe('Toggle service notifications.'),
         confirm: schemaConfirm,
       }),
     },
@@ -121,7 +121,7 @@ export function registerAccountTools(
       if (Object.keys(provided).length === 0) {
         return minifiedResult({
           error:
-            "Specify at least one field to change (first_name, last_name, phone, send_email_reminders, service_notifications).",
+            'Specify at least one field to change (first_name, last_name, phone, send_email_reminders, service_notifications).',
         });
       }
       const current = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
@@ -129,8 +129,8 @@ export function registerAccountTools(
       if (confirm !== true) {
         return minifiedResult({
           preview: true,
-          action: "update_account",
-          note: "DRY RUN — nothing was sent. Re-run with confirm: true to save.",
+          action: 'update_account',
+          note: 'DRY RUN — nothing was sent. Re-run with confirm: true to save.',
           current,
           wouldSet: next,
         });
@@ -152,7 +152,7 @@ export function registerAccountTools(
         ...(verified
           ? {}
           : {
-              note: "The portal accepted the request but a re-read shows the values did not fully change — the save may not have persisted.",
+              note: 'The portal accepted the request but a re-read shows the values did not fully change — the save may not have persisted.',
             }),
       });
     },
