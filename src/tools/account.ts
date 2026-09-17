@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
@@ -29,7 +29,7 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
       description:
         'Get your Crown Town Compost dashboard: account status, active subscription (plan, price, renewal date), next service date, service address(es) and their pickup day(s), and your composting environmental impact (lbs diverted, seedlings, miles offset, gallons of gas). Read-only.',
       annotations: toolAnnotations({ title: 'Get dashboard summary', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () => {
       const dash = parseDashboard(await client.fetchHtml('/accounts/'));
@@ -51,30 +51,30 @@ export function registerAccountTools(server: McpServer, client: CrownTownClient)
       description:
         'Get your account contact details (first name, last name, phone) and notification preferences (email reminders, service notifications). Read-only — use crowntown_update_account to change them.',
       annotations: toolAnnotations({ title: 'Get account details', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {
-        view: viewArg(),},
+      inputSchema: z.object({
+        view: viewArg(),}),
     },
     async ({ view }) => {
-      const details = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
-      return viewResponse(view, details);
+const details = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
+return viewResponse(view, details);
     },
   );
 
   server.registerTool(
     'crowntown_update_account',
     {
-      title: 'Update account contact details / preferences',
-      description:
-        'Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. Without confirm:true this is a DRY RUN showing the resulting state.',
-      annotations: toolAnnotations({ title: 'Update account details', readOnly: false, openWorld: true }),
-      inputSchema: {
+title: 'Update account contact details / preferences',
+description:
+  'Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. Without confirm:true this is a DRY RUN showing the resulting state.',
+annotations: toolAnnotations({ title: 'Update account details', readOnly: false, openWorld: true }),
+inputSchema: z.object({
         first_name: z.string().min(1).optional().describe('New first name.'),
         last_name: z.string().min(1).optional().describe('New last name.'),
         phone: z.string().min(1).optional().describe('New phone number.'),
         send_email_reminders: z.boolean().optional().describe('Toggle email pickup reminders.'),
         service_notifications: z.boolean().optional().describe('Toggle service notifications.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ confirm, ...changes }) => {
       const provided = Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== undefined)) as Partial<AccountDetails>;

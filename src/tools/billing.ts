@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
@@ -25,11 +25,11 @@ export function registerBillingTools(server: McpServer, client: CrownTownClient)
       description:
         'List your Crown Town Compost invoices — number, date, amount, status, whether payable, and links (Stripe PDF / receipt / hosted invoice page). Paginated. Read-only.',
       annotations: toolAnnotations({ title: 'List invoices', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         page: z.number().int().positive().default(1).describe('1-based page number.'),
         per_page: z.number().int().positive().max(100).default(20).describe('Rows per page (max 100).'),
         payable_only: z.boolean().default(false).describe('Return only open/payable invoices.'),
-      },
+      }),
     },
     async ({ page, per_page, payable_only }) => {
       const res = await client.datatable<InvoiceRow>('/accounts/billing-history/api/', {

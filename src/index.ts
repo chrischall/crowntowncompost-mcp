@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { runMcp } from '@chrischall/mcp-utils';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { VERSION } from './version.js';
 import { client } from './client.js';
 import { registerHealthcheckTools } from './tools/healthcheck.js';

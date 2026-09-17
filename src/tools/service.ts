@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
@@ -55,14 +55,14 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'List past collection stops for your account — date, status (Success/Missing/Empty/Inaccessible/Unacceptable), collection time, weight, and services rendered. Paginated and filterable by status. Read-only.',
       annotations: toolAnnotations({ title: 'List service history', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         status: z
           .enum(STOP_STATUS)
           .optional()
           .describe('Filter by outcome. Omit for all. One of: success, missing, empty, inaccessible, unacceptable.'),
         page: z.number().int().positive().default(1).describe('1-based page number.'),
         per_page: z.number().int().positive().max(100).default(20).describe('Rows per page (max 100).'),
-      },
+      }),
     },
     async ({ status, page, per_page }) => {
       const res = await client.datatable<StopRow>('/accounts/stops/api/', {
@@ -99,7 +99,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'List upcoming scheduled collection days from the service calendar, each with the identifiers needed to skip it (rid, clid), the service date, and whether it is currently scheduled or already skipped. Read-only — use crowntown_skip_service to actually skip/unskip.',
       annotations: toolAnnotations({ title: 'List upcoming services', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () => {
       const services = parseSkippableServices(await client.fetchHtml('/accounts/service-calendar/'));
@@ -118,7 +118,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'Get the pickup schedule for each service address: pickup day(s), next service date, the official set-out-by time, and an observed arrival-time window (earliest/latest/typical and whether it is consistent or varies) derived from the recorded collection times in your service history. Crown Town Compost publishes no guaranteed arrival window, so the observed window is empirical. Read-only.',
       annotations: toolAnnotations({ title: 'Get pickup schedule', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         history_sample: z
           .number()
           .int()
@@ -126,7 +126,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
           .max(100)
           .default(60)
           .describe('How many recent stops to derive the observed time window from (max 100).'),
-      },
+      }),
     },
     async ({ history_sample }) => {
       const dash = parseDashboard(await client.fetchHtml('/accounts/'));
@@ -205,7 +205,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'Skip (or un-skip) an upcoming collection day. Pass the rid + clid from crowntown_list_upcoming_services. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
       annotations: toolAnnotations({ title: 'Skip/un-skip a service', readOnly: false, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         rid: z.string().regex(/^\d+$/).describe('Route id (data-rid) from crowntown_list_upcoming_services.'),
         clid: z.string().regex(/^\d+$/).describe('Client-location id (data-clid) from crowntown_list_upcoming_services.'),
         action: z
@@ -213,7 +213,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
           .default('skip')
           .describe('"skip" to skip the day, "unskip" to restore it. Match the action from the upcoming-services list.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ rid, clid, action, confirm }) => {
       if (confirm !== true) {

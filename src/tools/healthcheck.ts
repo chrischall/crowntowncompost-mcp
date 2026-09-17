@@ -1,8 +1,9 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { messageOf, minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard } from '../parse.js';
 import { isConfigError } from '../auth.js';
+import { z } from "zod";
 
 export function registerHealthcheckTools(server: McpServer, client: CrownTownClient): void {
   server.registerTool(
@@ -12,7 +13,7 @@ export function registerHealthcheckTools(server: McpServer, client: CrownTownCli
       description:
         'Confirm credentials are configured, log in to the Crown Town Compost portal, fetch the dashboard, and report {authenticated, account_status, service_addresses} with a plain-English hint distinguishing "no creds" vs "bad creds" vs "site error". Read-only.',
       annotations: toolAnnotations({ title: 'Verify Crown Town auth + connectivity', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () => {
       try {
