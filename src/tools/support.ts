@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
@@ -14,11 +14,11 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       description:
         'Report that a scheduled collection was missed. This notifies Crown Town Compost staff. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
       annotations: toolAnnotations({ title: 'Report a missed pickup', readOnly: false, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         date: z.string().min(1).describe('The date of the missed pickup (as shown on your service calendar, e.g. "Jul 24, 2026").'),
         comment: z.string().default('').describe('Optional note with details for the staff.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ date, comment, confirm }) => {
       if (confirm !== true) {
@@ -49,12 +49,12 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       description:
         'Send a message to Crown Town Compost customer support. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
       annotations: toolAnnotations({ title: 'Contact support', readOnly: false, openWorld: true }),
-      inputSchema: {
+      inputSchema: z.object({
         message: z.string().min(1).describe('The message to send to support.'),
         email: z.string().email().optional().describe('Reply-to email (defaults to the account email if omitted).'),
         phone: z.string().optional().describe('Contact phone (optional).'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ message, email, phone, confirm }) => {
       const params = new URLSearchParams({ message });
