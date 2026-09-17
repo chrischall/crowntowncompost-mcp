@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.2...v0.6.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mcp:** migrate server to SDK v2 ([#64](https://github.com/chrischall/crowntowncompost-mcp/issues/64))
+
+### Features
+
+* **mcp:** migrate server to SDK v2 ([#64](https://github.com/chrischall/crowntowncompost-mcp/issues/64)) ([62c44e9](https://github.com/chrischall/crowntowncompost-mcp/commit/62c44e969b7f83a55cf35128312552ce50aefaaf))
+
+
+### Bug Fixes
+
+* **mcp:** restore tool source style ([#67](https://github.com/chrischall/crowntowncompost-mcp/issues/67)) ([45fcc43](https://github.com/chrischall/crowntowncompost-mcp/commit/45fcc438e77950771ef3b68c83645f2788bf9f3c))
+
 ## [0.5.2](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.1...v0.5.2) (2026-09-11)
 
 
