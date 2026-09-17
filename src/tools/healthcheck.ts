@@ -1,26 +1,25 @@
-import type { McpServer } from "@modelcontextprotocol/server";
+import type { McpServer } from '@modelcontextprotocol/server';
+import { z } from 'zod';
 import {
   messageOf,
   minifiedResult,
   toolAnnotations,
-} from "@chrischall/mcp-utils";
-import type { CrownTownClient } from "../client.js";
-import { parseDashboard } from "../parse.js";
-import { isConfigError } from "../auth.js";
-import { z } from "zod";
-
+} from '@chrischall/mcp-utils';
+import type { CrownTownClient } from '../client.js';
+import { parseDashboard } from '../parse.js';
+import { isConfigError } from '../auth.js';
 export function registerHealthcheckTools(
   server: McpServer,
   client: CrownTownClient,
 ): void {
   server.registerTool(
-    "crowntown_healthcheck",
+    'crowntown_healthcheck',
     {
-      title: "Verify Crown Town Compost auth + connectivity",
+      title: 'Verify Crown Town Compost auth + connectivity',
       description:
         'Confirm credentials are configured, log in to the Crown Town Compost portal, fetch the dashboard, and report {authenticated, account_status, service_addresses} with a plain-English hint distinguishing "no creds" vs "bad creds" vs "site error". Read-only.',
       annotations: toolAnnotations({
-        title: "Verify Crown Town auth + connectivity",
+        title: 'Verify Crown Town auth + connectivity',
         readOnly: true,
         idempotent: true,
         openWorld: true,
@@ -29,7 +28,7 @@ export function registerHealthcheckTools(
     },
     async () => {
       try {
-        const dash = parseDashboard(await client.fetchHtml("/accounts/"));
+        const dash = parseDashboard(await client.fetchHtml('/accounts/'));
         return minifiedResult({
           ok: true,
           authenticated: true,
@@ -37,8 +36,8 @@ export function registerHealthcheckTools(
           service_addresses: dash.service_addresses.length,
           hint:
             dash.account_status || dash.service_addresses.length
-              ? "Logged in; dashboard parsed successfully."
-              : "Logged in, but the dashboard did not parse — the portal markup may have changed.",
+              ? 'Logged in; dashboard parsed successfully.'
+              : 'Logged in, but the dashboard did not parse — the portal markup may have changed.',
         });
       } catch (e) {
         const msg = messageOf(e);
@@ -52,7 +51,7 @@ export function registerHealthcheckTools(
           error: msg,
           hint: noCreds
             ? `${msg} Set it in .env or the MCP host env, then retry.`
-            : "Login or fetch failed — verify your portal.crowntowncompost.com username/email and password are correct.",
+            : 'Login or fetch failed — verify your portal.crowntowncompost.com username/email and password are correct.',
         });
       }
     },
