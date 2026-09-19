@@ -21,7 +21,7 @@
   ],
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.0.0"
   },
   "bin": {
     "crowntowncompost-mcp": "dist/index.js"
@@ -45,7 +45,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@chrischall/mcp-utils": "^0.28.0",
+    "@chrischall/mcp-utils": "^1.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "dotenv": "^17.4.0",
     "node-html-parser": "^9.0.0",
