@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.6.0...v1.0.0) (2026-09-20)
+
+
+### Features
+
+* **deps:** take mcp-utils 1.0.0, raise Node floor to 22 ([#70](https://github.com/chrischall/crowntowncompost-mcp/issues/70)) ([1d42cf6](https://github.com/chrischall/crowntowncompost-mcp/commit/1d42cf667b8906735f6599647af4d95f7ab5dc96))
+
+
+### Bug Fixes
+
+* **release:** drop bump-minor-pre-major so a breaking change cuts a major ([#72](https://github.com/chrischall/crowntowncompost-mcp/issues/72)) ([b9d171c](https://github.com/chrischall/crowntowncompost-mcp/commit/b9d171cca68b3d2ee812672a2a95953add84ae51))
+
 ## [0.6.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.5.2...v0.6.0) (2026-09-17)
 
 
