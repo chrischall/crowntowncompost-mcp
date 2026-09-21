@@ -204,7 +204,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       title: 'Skip or un-skip an upcoming service',
       description:
         'Skip (or un-skip) an upcoming collection day. Pass the rid + clid from crowntown_list_upcoming_services. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
-      annotations: toolAnnotations({ title: 'Skip/un-skip a service', readOnly: false, openWorld: true }),
+      annotations: toolAnnotations({ title: 'Skip/un-skip a service', readOnly: false, openWorld: true, destructive: false }),
       inputSchema: z.object({
         rid: z.string().regex(/^\d+$/).describe('Route id (data-rid) from crowntown_list_upcoming_services.'),
         clid: z.string().regex(/^\d+$/).describe('Client-location id (data-clid) from crowntown_list_upcoming_services.'),

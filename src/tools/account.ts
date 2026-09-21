@@ -98,6 +98,7 @@ export function registerAccountTools(
         title: 'Update account details',
         readOnly: false,
         openWorld: true,
+        destructive: false,
       }),
       inputSchema: z.object({
         first_name: z.string().min(1).optional().describe('New first name.'),

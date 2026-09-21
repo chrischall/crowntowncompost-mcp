@@ -13,7 +13,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       title: 'Report a missed pickup',
       description:
         'Report that a scheduled collection was missed. This notifies Crown Town Compost staff. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
-      annotations: toolAnnotations({ title: 'Report a missed pickup', readOnly: false, openWorld: true }),
+      annotations: toolAnnotations({ title: 'Report a missed pickup', readOnly: false, openWorld: true, destructive: true }),
       inputSchema: z.object({
         date: z.string().min(1).describe('The date of the missed pickup (as shown on your service calendar, e.g. "Jul 24, 2026").'),
         comment: z.string().default('').describe('Optional note with details for the staff.'),
@@ -48,7 +48,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       title: 'Send a message to customer support',
       description:
         'Send a message to Crown Town Compost customer support. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
-      annotations: toolAnnotations({ title: 'Contact support', readOnly: false, openWorld: true }),
+      annotations: toolAnnotations({ title: 'Contact support', readOnly: false, openWorld: true, destructive: true }),
       inputSchema: z.object({
         message: z.string().min(1).describe('The message to send to support.'),
         email: z.string().email().optional().describe('Reply-to email (defaults to the account email if omitted).'),
