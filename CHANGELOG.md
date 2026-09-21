@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.0...v1.0.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **tools:** say which writes are destructive ([#73](https://github.com/chrischall/crowntowncompost-mcp/issues/73)) ([463c1b4](https://github.com/chrischall/crowntowncompost-mcp/commit/463c1b4936f1eb9d4ea9028e87ac949b6aa11534))
+
 ## [1.0.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v0.6.0...v1.0.0) (2026-09-20)
 
 
