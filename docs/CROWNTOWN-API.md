@@ -146,6 +146,12 @@ Django forms POST to their own URL (empty `action` = self) with `csrfmiddlewaret
 | Export billing CSV | `/accounts/billing-history/csv/` | POST | `ids[], qs, csrfmiddlewaretoken` |
 
 Notes:
+- Report missed pickup: `date` is a text input bound to a bootstrap-datepicker with `format: 'yyyy-mm-dd'`
+  (captured 2026-09-23) — send ISO dates.
+- Contact support: the GET form pre-fills `email` and `phone` from the account; a browser submits them.
+- Django form POSTs answer **302** on success and a **200 re-render** (with `ul.errorlist` field errors) on a
+  validation failure, so the missed-pickup and support tools POST with `redirect: manual` and only report
+  success on a 3xx.
 - Cancellation-request field names are **per-location dynamic** (`final_route_3360`, `cancel_location_3360`, `cf_8`) — read the GET form first to discover them (read-modify-write).
 - Skip service: to enumerate skippable days + their `rid`/`clid`/date, parse the rendered
   service-calendar (FullCalendar `events` array + `.submit-skip` button data attrs).

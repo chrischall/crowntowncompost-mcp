@@ -96,8 +96,24 @@ export class CrownTownClient {
     return this.requestWithSession('POST', path, body);
   }
 
-  private async requestWithSession(method: 'GET' | 'POST', path: string, body?: string): Promise<PortalResponse> {
-    const res = await this.auth.withSession(() => this.send(method, path, body));
+  /**
+   * POST a classic Django form WITHOUT following its redirect, so the caller can
+   * tell acceptance from rejection: Django answers a valid submission with a
+   * 302 (post/redirect/get) and an invalid one with a 200 re-render of the form
+   * carrying the field errors. Following the redirect erases that difference.
+   * A 302 back to the login page still counts as an expired session.
+   */
+  async submitForm(path: string, body: string): Promise<PortalResponse> {
+    return this.requestWithSession('POST', path, body, 'manual');
+  }
+
+  private async requestWithSession(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: string,
+    redirect: 'follow' | 'manual' = 'follow',
+  ): Promise<PortalResponse> {
+    const res = await this.auth.withSession(() => this.send(method, path, body, redirect));
     if (looksUnauthenticated(res)) {
       throw new McpToolError('Crown Town Compost session could not be (re)established after re-login.', {
         hint: 'Your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD may be wrong, or the session keeps expiring. Verify the credentials.',
@@ -112,7 +128,7 @@ export class CrownTownClient {
     return res;
   }
 
-  private send(method: 'GET' | 'POST', path: string, body?: string): Promise<PortalResponse> {
+  private send(method: 'GET' | 'POST', path: string, body: string | undefined, redirect: 'follow' | 'manual'): Promise<PortalResponse> {
     const headers: Record<string, string> = { Cookie: this.auth.cookieHeader() };
     if (method === 'POST') {
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -126,8 +142,9 @@ export class CrownTownClient {
     }
     // Reads follow redirects (so an expired session lands on the login page and
     // is detected by looksUnauthenticated); the datatable/write POSTs also follow
-    // so a successful Django 302 resolves to its destination.
-    return this.transport.request({ method, path, headers, body, redirect: 'follow' });
+    // so a successful Django 302 resolves to its destination. submitForm() opts
+    // out ('manual') because for a form POST the redirect itself is the verdict.
+    return this.transport.request({ method, path, headers, body, redirect });
   }
 }
 

@@ -140,6 +140,34 @@ describe('CrownTownClient session handling', () => {
   });
 });
 
+describe('CrownTownClient.submitForm', () => {
+  // A Django form POST answers 302 on success and 200 (re-render) on a
+  // validation error, so the redirect must be read, not followed.
+  it('POSTs with CSRF headers and redirect:manual, returning the raw 302', async () => {
+    const { client, transport } = clientWith(() => res({ status: 302, location: '/accounts/', url: 'https://portal.crowntowncompost.com/accounts/support/' }));
+    const out = await client.submitForm('/accounts/support/', 'message=hi');
+    expect(out.status).toBe(302);
+    const req = transport.appRequests[0];
+    expect(req.method).toBe('POST');
+    expect(req.redirect).toBe('manual');
+    expect(req.headers!['X-CSRFToken']).toBe('CSRFCOOKIE');
+    expect(req.body).toBe('message=hi');
+  });
+
+  it('treats a 302 to the login page as an expired session: re-login and replay once', async () => {
+    let served = 0;
+    const { client, transport } = clientWith(() => {
+      served += 1;
+      return served === 1
+        ? res({ status: 302, location: '/accounts/login/?next=/accounts/support/', url: 'https://portal.crowntowncompost.com/accounts/support/' })
+        : res({ status: 302, location: '/accounts/', url: 'https://portal.crowntowncompost.com/accounts/support/' });
+    });
+    const out = await client.submitForm('/accounts/support/', 'message=hi');
+    expect(out.location).toBe('/accounts/');
+    expect(transport.appRequests).toHaveLength(2);
+  });
+});
+
 describe('createDirectClient', () => {
   // The per-user seam: each call must mint its OWN transport + AuthManager, so
   // two concurrent sessions never share a cookie jar. Its only previous

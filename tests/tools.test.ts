@@ -324,23 +324,82 @@ describe('crowntown_update_account', () => {
   });
 });
 
+// The live forms (captured 2026-09-23): the missed-pickup `date` is a text input
+// bound to a bootstrap-datepicker with format 'yyyy-mm-dd'; the support form
+// pre-fills `email` and `phone` from the account, and a browser submits them.
+const SUPPORT_FORM_HTML = `<form method="post">
+  <input type="hidden" name="csrfmiddlewaretoken" value="T">
+  <textarea name="message" class="form-control"></textarea>
+  <input type="email" name="email" class="form-control" value="owner@example.com">
+  <input type="text" name="phone" class="form-control" value="555-123-4567">
+</form>`;
+// Django's form_invalid: a 200 re-render of the same URL with the field errors.
+const MISSED_PICKUP_INVALID_HTML = `<form method="post">
+  <input type="text" name="date" class="form-control is-invalid" required id="id_date">
+  <ul class="errorlist"><li>Enter a valid date.</li></ul>
+  <textarea name="comment" class="form-control"></textarea>
+</form>`;
+const MISSED_PICKUP_FORM_HTML = `<form method="post">
+  <input type="text" name="date" class="form-control" required id="id_date">
+  <textarea name="comment" class="form-control"></textarea>
+</form>`;
+const PORTAL = 'https://portal.crowntowncompost.com';
+
 describe('support write tools', () => {
   it('report_missed_pickup makes no call without confirm', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302 }), (s, c) => registerSupportTools(s, c));
     const out = await call(h, 'crowntown_report_missed_pickup', { date: 'Jul 24, 2026' });
     expect(out.preview).toBe(true);
+    expect(out.wouldSend.date).toBe('2026-07-24');
     expect(transport.requests).toHaveLength(0);
   });
 
-  it('report_missed_pickup posts date + comment when confirmed', async () => {
+  it('report_missed_pickup posts an ISO date + comment without following the redirect', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
-    const out = await call(h, 'crowntown_report_missed_pickup', { date: 'Jul 24, 2026', comment: 'bin was out', confirm: true });
+    const out = await call(h, 'crowntown_report_missed_pickup', { date: 'Friday, Jul 24, 2026', comment: 'bin was out', confirm: true });
     const body = new URLSearchParams(transport.writes[0].body!);
-    expect(body.get('date')).toBe('Jul 24, 2026');
+    // The portal's datepicker submits yyyy-mm-dd; a human date is normalised to it.
+    expect(body.get('date')).toBe('2026-07-24');
     expect(body.get('comment')).toBe('bin was out');
+    // The redirect IS the success signal, so it must not be followed away.
+    expect(transport.writes[0].redirect).toBe('manual');
     // No per-report re-read exists, so the tool must not claim verification.
     expect(out.verified).toBe(false);
     expect(out.submitted).toBe(true);
+  });
+
+  it('report_missed_pickup passes an ISO date through unchanged', async () => {
+    const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
+    await call(h, 'crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true });
+    expect(new URLSearchParams(transport.writes[0].body!).get('date')).toBe('2026-07-24');
+  });
+
+  it('report_missed_pickup rejects an unparseable date before sending anything', async () => {
+    const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
+    const out = (await h.callTool('crowntown_report_missed_pickup', { date: 'last week', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    expect(out.isError).toBe(true);
+    expect(out.content[0].text).toMatch(/date/i);
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it('report_missed_pickup surfaces Django field errors when the form re-renders (200)', async () => {
+    const { harness: h } = await setup(
+      () => res({ status: 200, url: `${PORTAL}/accounts/report-missed-pickup/`, body: MISSED_PICKUP_INVALID_HTML }),
+      (s, c) => registerSupportTools(s, c),
+    );
+    const out = (await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    expect(out.isError).toBe(true);
+    expect(out.content[0].text).toMatch(/not submitted|did not accept/i);
+    expect(out.content[0].text).toContain('Enter a valid date.');
+  });
+
+  it('report_missed_pickup does not claim success on a 200 with no redirect, even without error markup', async () => {
+    const { harness: h } = await setup(
+      () => res({ status: 200, url: `${PORTAL}/accounts/report-missed-pickup/`, body: MISSED_PICKUP_FORM_HTML }),
+      (s, c) => registerSupportTools(s, c),
+    );
+    const out = (await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true })) as { isError?: boolean };
+    expect(out.isError).toBe(true);
   });
 
   it('contact_support makes no call without confirm', async () => {
@@ -351,11 +410,38 @@ describe('support write tools', () => {
   });
 
   it('contact_support posts the message when confirmed', async () => {
-    const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
-    await call(h, 'crowntown_contact_support', { message: 'please help', email: 'test@example.com', confirm: true });
+    const { harness: h, transport } = await setup(
+      (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/' }) : res({ body: SUPPORT_FORM_HTML })),
+      (s, c) => registerSupportTools(s, c),
+    );
+    const out = await call(h, 'crowntown_contact_support', { message: 'please help', email: 'test@example.com', confirm: true });
     const body = new URLSearchParams(transport.writes[0].body!);
     expect(body.get('message')).toBe('please help');
     expect(body.get('email')).toBe('test@example.com');
+    expect(transport.writes[0].redirect).toBe('manual');
+    expect(out.submitted).toBe(true);
+  });
+
+  it('contact_support sends the form\'s pre-filled email and phone when the caller omits them', async () => {
+    const { harness: h, transport } = await setup(
+      (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/' }) : res({ body: SUPPORT_FORM_HTML })),
+      (s, c) => registerSupportTools(s, c),
+    );
+    await call(h, 'crowntown_contact_support', { message: 'please help', confirm: true });
+    const body = new URLSearchParams(transport.writes[0].body!);
+    expect(body.get('email')).toBe('owner@example.com');
+    expect(body.get('phone')).toBe('555-123-4567');
+  });
+
+  it('contact_support surfaces Django field errors when the form re-renders (200)', async () => {
+    const invalid = SUPPORT_FORM_HTML.replace('<textarea', '<ul class="errorlist"><li>This field is required.</li></ul><textarea');
+    const { harness: h } = await setup(
+      (req) => (req.method === 'POST' ? res({ status: 200, url: `${PORTAL}/accounts/support/`, body: invalid }) : res({ body: SUPPORT_FORM_HTML })),
+      (s, c) => registerSupportTools(s, c),
+    );
+    const out = (await h.callTool('crowntown_contact_support', { message: 'x', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    expect(out.isError).toBe(true);
+    expect(out.content[0].text).toContain('This field is required.');
   });
 });
 
