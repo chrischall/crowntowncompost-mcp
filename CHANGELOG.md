@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.1...v1.0.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** require zod ^4.6.5 to match @chrischall/mcp-utils 2.4.0 ([#77](https://github.com/chrischall/crowntowncompost-mcp/issues/77)) ([296ed06](https://github.com/chrischall/crowntowncompost-mcp/commit/296ed06b9aeedfb4c03210c1ecb59bc71cc6315b))
+* **deps:** upgrade @chrischall/mcp-utils to 2.4.0 and @fetchproxy/* to 3.2.0 ([#75](https://github.com/chrischall/crowntowncompost-mcp/issues/75)) ([2b1b54e](https://github.com/chrischall/crowntowncompost-mcp/commit/2b1b54e14aaaab429416da6371f33d040cd33b43))
+
 ## [1.0.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.0...v1.0.1) (2026-09-21)
 
 
