@@ -176,10 +176,14 @@ ctget /accounts/service-calendar/ | grep -o 'data-action="[^"]*" data-clid="3360
 
 ### Report a missed pickup — `/accounts/report-missed-pickup/`
 
+`date` is bound to a datepicker with format `yyyy-mm-dd` — send ISO. Success is a
+**302**; a **200** is Django re-rendering the form with errors (look for
+`ul.errorlist`), meaning nothing was submitted.
+
 ```sh
 ctpost /accounts/report-missed-pickup/ \
   --data-urlencode "csrfmiddlewaretoken=$(csrf)" \
-  --data-urlencode 'date=Jul 24, 2026' \
+  --data-urlencode 'date=2026-07-24' \
   --data-urlencode 'comment=Bin was out by 6am, not collected.'
 ```
 
@@ -200,6 +204,9 @@ ctget /accounts/update/ | grep -oE 'name="phone" value="[^"]*"'
 ```
 
 ### Contact support — `/accounts/support/`
+
+The form pre-fills `email` and `phone` from the account; send them (a browser
+does). As above, a 302 means accepted and a 200 re-render means rejected.
 
 ```sh
 ctpost /accounts/support/ \
