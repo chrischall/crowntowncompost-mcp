@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.2...v1.0.3) (2026-09-23)
+
+
+### Bug Fixes
+
+* **support:** stop reporting rejected missed-pickup and support forms as sent ([#78](https://github.com/chrischall/crowntowncompost-mcp/issues/78)) ([77f9e7c](https://github.com/chrischall/crowntowncompost-mcp/commit/77f9e7c41f0dc489cf85982f3c8856a5c349f584))
+
 ## [1.0.2](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.1...v1.0.2) (2026-09-23)
 
 
