@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.3...v1.1.0) (2026-09-24)
+
+
+### Features
+
+* confirm writes with a preview token instead of confirm: true ([#80](https://github.com/chrischall/crowntowncompost-mcp/issues/80)) ([7fd1c32](https://github.com/chrischall/crowntowncompost-mcp/commit/7fd1c329e8f0217e815881de945c796d026385c4))
+
 ## [1.0.3](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.0.2...v1.0.3) (2026-09-23)
 
 
