@@ -1,8 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import {
+  confirmationFromEnv,
+  confirmTokenParam,
   minifiedResult,
-  schemaConfirm,
+  requireConfirmationWithFallback,
   toolAnnotations,
 } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
@@ -93,7 +95,7 @@ export function registerAccountTools(
     {
       title: 'Update account contact details / preferences',
       description:
-        'Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. Without confirm:true this is a DRY RUN showing the resulting state.',
+        'Update your contact details and/or notification preferences. Reads your current account form, changes ONLY the field(s) you specify, and re-saves the rest verbatim. The preview shows the current values and the resulting state. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({
         title: 'Update account details',
         readOnly: false,
@@ -112,10 +114,10 @@ export function registerAccountTools(
           .boolean()
           .optional()
           .describe('Toggle service notifications.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ confirm, ...changes }) => {
+    async ({ confirmToken, ...changes }, ctx) => {
       const provided = Object.fromEntries(
         Object.entries(changes).filter(([, v]) => v !== undefined),
       ) as Partial<AccountDetails>;
@@ -127,15 +129,21 @@ export function registerAccountTools(
       }
       const current = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
       const { body, next } = buildUpdateBody(current, provided);
-      if (confirm !== true) {
-        return minifiedResult({
-          preview: true,
-          action: 'update_account',
-          note: 'DRY RUN — nothing was sent. Re-run with confirm: true to save.',
-          current,
-          wouldSet: next,
-        });
-      }
+      const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
+        action: 'account.update',
+        message: 'Review and confirm these account changes:',
+        details: { changes: provided, wouldSet: next },
+        tool: 'crowntown_update_account',
+        confirmToken,
+        // `next` is the whole form that will be re-saved, current values
+        // included, so an edit made elsewhere between the calls is refused.
+        subject: () => ({
+          target: UPDATE_PATH,
+          payload: { endpoint: UPDATE_PATH, body },
+          preview: { action: 'update_account', current, wouldSet: next },
+        }),
+      }));
+      if (gate) return gate;
       const res = await client.write(UPDATE_PATH, body);
       // Django 302s on save; re-read to confirm the values actually persisted.
       const after = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));

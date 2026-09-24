@@ -1,6 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import {
+  confirmationFromEnv,
+  confirmTokenParam,
+  minifiedResult,
+  requireConfirmationWithFallback,
+  toolAnnotations,
+} from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard, parsePortalTime, parseSkippableServices, summarizeObservedTimes } from '../parse.js';
 
@@ -203,7 +209,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
     {
       title: 'Skip or un-skip an upcoming service',
       description:
-        'Skip (or un-skip) an upcoming collection day. Pass the rid + clid from crowntown_list_upcoming_services. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
+        'Skip (or un-skip) an upcoming collection day. Pass the rid + clid from crowntown_list_upcoming_services. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Skip/un-skip a service', readOnly: false, openWorld: true, destructive: false }),
       inputSchema: z.object({
         rid: z.string().regex(/^\d+$/).describe('Route id (data-rid) from crowntown_list_upcoming_services.'),
@@ -212,18 +218,24 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
           .enum(['skip', 'unskip'])
           .default('skip')
           .describe('"skip" to skip the day, "unskip" to restore it. Match the action from the upcoming-services list.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ rid, clid, action, confirm }) => {
-      if (confirm !== true) {
-        return minifiedResult({
-          preview: true,
-          action: 'skip_service',
-          note: 'DRY RUN — nothing was sent. Re-run with confirm: true to perform this change.',
-          wouldSend: { endpoint: SKIP_ENDPOINT, rid, clid, action },
-        });
-      }
+    async ({ rid, clid, action, confirmToken }, ctx) => {
+      const wouldSend = { endpoint: SKIP_ENDPOINT, rid, clid, action };
+      const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
+        action: 'service.skip',
+        message: action === 'skip' ? 'Review and confirm skipping this collection day:' : 'Review and confirm restoring this collection day:',
+        details: wouldSend,
+        tool: 'crowntown_skip_service',
+        confirmToken,
+        subject: () => ({
+          target: `${rid}:${clid}`,
+          payload: wouldSend,
+          preview: { action: 'skip_service', wouldSend },
+        }),
+      }));
+      if (gate) return gate;
       const body = new URLSearchParams({ rid, clid, action }).toString();
       const res = await client.write(SKIP_ENDPOINT, body);
 

@@ -36,16 +36,19 @@ describe('full tool surface', () => {
   });
 
   // `harness.listTools()` returns names only, so read the full metadata off the
-  // raw MCP client to assert annotations + the confirm gate.
+  // raw MCP client to assert annotations + the confirmation gate.
   const fullTools = async () => (await harness.client.listTools()).tools;
 
-  it('marks every mutating tool as non-readOnly and gives it a confirm gate', async () => {
+  it('marks every mutating tool as non-readOnly and gives it the confirm-token gate (and no bare confirm flag)', async () => {
     const tools = await fullTools();
     const writes = ['crowntown_skip_service', 'crowntown_update_account', 'crowntown_report_missed_pickup', 'crowntown_contact_support'];
     for (const name of writes) {
       const t = tools.find((x) => x.name === name)!;
       expect(t.annotations?.readOnlyHint, name).toBe(false);
-      expect(Object.keys((t.inputSchema as { properties?: Record<string, unknown> }).properties ?? {}), name).toContain('confirm');
+      const props = Object.keys((t.inputSchema as { properties?: Record<string, unknown> }).properties ?? {});
+      expect(props, name).toContain('confirmToken');
+      expect(props, name).not.toContain('confirm');
+      expect(t.description, name).toMatch(/confirmToken/);
     }
   });
 

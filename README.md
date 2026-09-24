@@ -67,7 +67,7 @@ host's install-time probe succeeds); the configuration error surfaces on the fir
 | `crowntown_list_upcoming_services` | Upcoming collection days, each with the ids needed to skip it |
 | `crowntown_list_invoices` | Billing history with amounts, status, and Stripe payment links |
 
-### Writes (all confirm-gated)
+### Writes (all confirmation-gated)
 
 | Tool | What it does |
 |---|---|
@@ -76,10 +76,23 @@ host's install-time probe succeeds); the configuration error surfaces on the fir
 | `crowntown_report_missed_pickup` | Report that a collection was missed |
 | `crowntown_contact_support` | Send a message to customer support |
 
-Every mutating tool takes `confirm`. Without `confirm: true` it makes **no network call** and returns
-a dry-run preview of exactly what would be sent. Where a re-read can prove the change stuck (skips,
-account updates) the tool re-reads and reports `verified`; where it can't (support messages, missed-pickup
-reports) it says so rather than claiming success.
+Every mutating tool asks you to confirm before it writes anything. A client that can show a
+confirmation prompt (Claude Code) gets that prompt. Elsewhere (claude.ai, Claude Desktop) the first
+call sends nothing and returns `status: "confirmation-required"` with a preview of exactly what would
+be sent plus a `confirmToken`; only a repeat call with the same arguments and that token proceeds.
+The token works once, expires, and is refused (`DRAFT_CHANGED`) if what would be sent changed in
+between — including values the tool reads first, such as the account form `crowntown_update_account`
+re-saves or the reply-to email/phone the support form pre-fills. Where a re-read can prove the change
+stuck (skips, account updates) the tool re-reads and reports `verified`; where it can't (support
+messages, missed-pickup reports) it says so rather than claiming success.
+
+### Confirmations
+
+| variable | default | |
+|---|---|---|
+| `MCP_CONFIRM_MODE` | `ask-user` | What a write does on a client that cannot show a confirmation prompt (claude.ai, Claude Desktop). `ask-user`: two steps — the first call does nothing and returns a preview plus a token, and the model must get your approval in chat before calling again with it. `auto`: the same two steps, but the model may use the token after reviewing the preview itself. `refuse`: writes are refused on such clients. A client that can show prompts (Claude Code) always gets the real prompt. An unrecognised value is treated as `refuse`. |
+| `MCP_CONFIRM_TTL_SECONDS` | `600` | How long a token stays valid. |
+| `MCP_CONFIRM_SECRET` | random per process | Signing key; set it only if tokens must survive a server restart. |
 
 Payments are deliberately out of scope — `crowntown_list_invoices` returns the hosted invoice URL for
 you to open in a browser.
