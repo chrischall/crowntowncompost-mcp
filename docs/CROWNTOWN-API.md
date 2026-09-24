@@ -25,7 +25,7 @@ CSRF via `csrftoken` cookie + `csrfmiddlewaretoken` hidden field.
     are all confirmed correct.
   - Every other write endpoint's field list below was read off the rendered form in a signed-in
     session but has **not** been submitted (they variously email staff, alter account settings, or
-    cancel service). Those tools are confirm-gated and verify by re-reading where a re-read exists,
+    cancel service). Those tools are confirmation-gated (elicitation prompt, or the two-step confirmToken flow) and verify by re-reading where a re-read exists,
     but their bodies remain unexercised.
 
 Shapes were captured through a signed-in browser session; values redacted, only shapes recorded.
@@ -131,7 +131,7 @@ every past stop, so `crowntown_get_pickup_schedule` derives an **observed** per-
 
 ---
 
-## WRITE flows (all confirm-gate in the MCP)
+## WRITE flows (all confirmation-gated in the MCP)
 
 Django forms POST to their own URL (empty `action` = self) with `csrfmiddlewaretoken`, unless noted.
 **A 302/redirect is NOT proof of success — re-read to verify.**

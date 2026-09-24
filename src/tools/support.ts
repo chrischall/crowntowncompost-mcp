@@ -1,6 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import {
+  confirmationFromEnv,
+  confirmTokenParam,
+  McpToolError,
+  minifiedResult,
+  requireConfirmationWithFallback,
+  toolAnnotations,
+} from '@chrischall/mcp-utils';
 import { parse } from 'node-html-parser';
 import type { CrownTownClient } from '../client.js';
 import type { PortalResponse } from '../transport.js';
@@ -75,7 +82,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
     {
       title: 'Report a missed pickup',
       description:
-        'Report that a scheduled collection was missed. This notifies Crown Town Compost staff. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
+        'Report that a scheduled collection was missed. This notifies Crown Town Compost staff. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Report a missed pickup', readOnly: false, openWorld: true, destructive: true }),
       inputSchema: z.object({
         date: z
@@ -83,24 +90,30 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
           .min(1)
           .describe('The date of the missed pickup: YYYY-MM-DD, or as shown on your service calendar (e.g. "Jul 24, 2026").'),
         comment: z.string().default('').describe('Optional note with details for the staff.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ date: rawDate, comment, confirm }) => {
+    async ({ date: rawDate, comment, confirmToken }, ctx) => {
       const date = toPortalDate(rawDate);
       if (date === null) {
         throw new McpToolError(`Could not read "${rawDate}" as a calendar date.`, {
           hint: 'Pass the date as YYYY-MM-DD (e.g. 2026-07-24) or like "Jul 24, 2026", including the year.',
         });
       }
-      if (confirm !== true) {
-        return minifiedResult({
-          preview: true,
-          action: 'report_missed_pickup',
-          note: 'DRY RUN — nothing was sent. Re-run with confirm: true to submit the report (this notifies staff).',
-          wouldSend: { endpoint: MISSED_PICKUP_PATH, date, comment },
-        });
-      }
+      const wouldSend = { endpoint: MISSED_PICKUP_PATH, date, comment };
+      const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
+        action: 'support.report_missed_pickup',
+        message: 'Review and confirm this missed-pickup report (it notifies Crown Town Compost staff):',
+        details: wouldSend,
+        tool: 'crowntown_report_missed_pickup',
+        confirmToken,
+        subject: () => ({
+          target: date,
+          payload: wouldSend,
+          preview: { action: 'report_missed_pickup', wouldSend },
+        }),
+      }));
+      if (gate) return gate;
       const body = new URLSearchParams({ date, comment }).toString();
       const res = await client.submitForm(MISSED_PICKUP_PATH, body);
       assertFormAccepted(res, 'missed-pickup report');
@@ -120,37 +133,44 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
     {
       title: 'Send a message to customer support',
       description:
-        'Send a message to Crown Town Compost customer support. Without confirm:true this is a DRY RUN that returns a preview and makes no network call.',
+        'Send a message to Crown Town Compost customer support. The reply-to email and phone default to the ones the support form pre-fills from your account, and the preview shows the exact values that will be sent. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Contact support', readOnly: false, openWorld: true, destructive: true }),
       inputSchema: z.object({
         message: z.string().min(1).describe('The message to send to support.'),
         email: z.string().email().optional().describe('Reply-to email (defaults to the account email if omitted).'),
         phone: z.string().optional().describe('Contact phone (optional).'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ message, email, phone, confirm }) => {
-      if (confirm !== true) {
-        return minifiedResult({
-          preview: true,
-          action: 'contact_support',
-          note: 'DRY RUN — nothing was sent. Re-run with confirm: true to send this message to support.',
-          wouldSend: {
-            endpoint: SUPPORT_PATH,
-            message,
-            email: email ?? '(the account email pre-filled on the form)',
-            phone: phone ?? '(the account phone pre-filled on the form)',
-          },
-        });
-      }
+    async ({ message, email, phone, confirmToken }, ctx) => {
       // The form pre-fills email and phone from the account and a browser submits
       // them; read it first so an omitted field carries that value, not nothing.
+      // Read on every call, so the preview (and the token) name the real values.
       const form = await client.fetchHtml(SUPPORT_PATH);
       const params = new URLSearchParams({ message });
       const replyEmail = email ?? prefilledValue(form, 'email');
       const replyPhone = phone ?? prefilledValue(form, 'phone');
       if (replyEmail) params.set('email', replyEmail);
       if (replyPhone) params.set('phone', replyPhone);
+      const wouldSend = {
+        endpoint: SUPPORT_PATH,
+        message,
+        email: replyEmail ?? '(not set)',
+        phone: replyPhone ?? '(not set)',
+      };
+      const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
+        action: 'support.contact',
+        message: 'Review and confirm this message to Crown Town Compost support:',
+        details: wouldSend,
+        tool: 'crowntown_contact_support',
+        confirmToken,
+        subject: () => ({
+          target: SUPPORT_PATH,
+          payload: { endpoint: SUPPORT_PATH, body: params.toString() },
+          preview: { action: 'contact_support', wouldSend },
+        }),
+      }));
+      if (gate) return gate;
       const res = await client.submitForm(SUPPORT_PATH, params.toString());
       assertFormAccepted(res, 'support message');
       return minifiedResult({

@@ -41,16 +41,30 @@ afterEach(async () => {
 async function setup(
   handler: (req: PortalRequest) => PortalResponse,
   register: (s: Parameters<Parameters<typeof createTestHarness>[0]>[0], c: CrownTownClient) => void,
+  options?: Parameters<typeof createTestHarness>[1],
 ) {
   const transport = new MockTransport(handler);
   const auth = new AuthManager(transport, { username: 'u', password: 'p' });
   const client = new CrownTownClient({ transport, auth });
-  harness = await createTestHarness((s) => register(s, client));
+  harness = await createTestHarness((s) => register(s, client), options);
   return { harness: harness!, transport };
 }
 
 const call = async (h: NonNullable<typeof harness>, name: string, args: Record<string, unknown> = {}) =>
   parseToolResult(await h.callTool(name, args)) as Record<string, any>;
+
+/**
+ * A harness with no elicitation handler is a client that cannot be prompted, so
+ * a write runs the two-step token flow: phase 1 returns a preview + confirmToken,
+ * phase 2 repeats the call with it. Returns phase 2's raw result.
+ */
+async function confirmedRaw(h: NonNullable<typeof harness>, name: string, args: Record<string, unknown> = {}) {
+  const phase1 = await call(h, name, args);
+  expect(phase1.status).toBe('confirmation-required');
+  return h.callTool(name, { ...args, confirmToken: phase1.confirmToken });
+}
+const confirmed = async (h: NonNullable<typeof harness>, name: string, args: Record<string, unknown> = {}) =>
+  parseToolResult(await confirmedRaw(h, name, args)) as Record<string, any>;
 
 describe('crowntown_list_service_history', () => {
   const stops = {
@@ -164,12 +178,22 @@ describe('crowntown_get_pickup_schedule', () => {
 });
 
 describe('crowntown_skip_service', () => {
-  it('makes NO network call without confirm and returns a preview', async () => {
+  it('phase 1 makes NO network call and returns a preview + confirmToken', async () => {
     const { harness: h, transport } = await setup(() => res({ body: CALENDAR_HTML }), (s, c) => registerServiceTools(s, c));
     const out = await call(h, 'crowntown_skip_service', { rid: '2815', clid: '3360' });
-    expect(out.preview).toBe(true);
-    expect(out.wouldSend).toMatchObject({ rid: '2815', clid: '3360', action: 'skip' });
+    expect(out.status).toBe('confirmation-required');
+    expect(out.confirmToken).toEqual(expect.any(String));
+    expect(out.preview.wouldSend).toMatchObject({ endpoint: '/accounts/service-calendar/skip-service/', rid: '2815', clid: '3360', action: 'skip' });
     expect(transport.requests).toHaveLength(0);
+  });
+
+  it('phase 2 with the token performs the skip exactly once', async () => {
+    const { harness: h, transport } = await setup(
+      (req) => (req.path.includes('skip-service') ? res({ status: 200, body: 'ok' }) : res({ body: CALENDAR_HTML })),
+      (s, c) => registerServiceTools(s, c),
+    );
+    await confirmed(h, 'crowntown_skip_service', { rid: '2815', clid: '3360' });
+    expect(transport.writes.filter((r) => r.path.includes('skip-service'))).toHaveLength(1);
   });
 
   it('posts rid/clid/action and verifies by re-reading the calendar', async () => {
@@ -184,7 +208,7 @@ describe('crowntown_skip_service', () => {
       return res({ body: skipped ? flipped : CALENDAR_HTML });
     }, (s, c) => registerServiceTools(s, c));
 
-    const out = await call(h, 'crowntown_skip_service', { rid: '2815', clid: '3360', confirm: true });
+    const out = await confirmed(h, 'crowntown_skip_service', { rid: '2815', clid: '3360' });
     const body = new URLSearchParams(transport.writes.find((r) => r.path.includes('skip-service'))!.body!);
     expect(body.get('rid')).toBe('2815');
     expect(body.get('clid')).toBe('3360');
@@ -198,7 +222,7 @@ describe('crowntown_skip_service', () => {
     const { harness: h } = await setup((req) =>
       req.path.includes('skip-service') ? res({ status: 200, body: 'ok' }) : res({ body: CALENDAR_HTML }),
     (s, c) => registerServiceTools(s, c));
-    const out = await call(h, 'crowntown_skip_service', { rid: '2815', clid: '3360', confirm: true });
+    const out = await confirmed(h, 'crowntown_skip_service', { rid: '2815', clid: '3360' });
     expect(out.verified).toBe(false);
     expect(out.note).toMatch(/may not have persisted/i);
   });
@@ -290,9 +314,44 @@ describe('crowntown_update_account', () => {
   it('previews the merged result without writing', async () => {
     const { harness: h, transport } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
     const out = await call(h, 'crowntown_update_account', { phone: '555-000-1111' });
-    expect(out.preview).toBe(true);
-    expect(out.wouldSet).toMatchObject({ first_name: 'Test', last_name: 'User', phone: '555-000-1111' });
+    expect(out.status).toBe('confirmation-required');
+    expect(out.confirmToken).toEqual(expect.any(String));
+    expect(out.preview.current).toMatchObject({ phone: '555-555-5555' });
+    expect(out.preview.wouldSet).toMatchObject({ first_name: 'Test', last_name: 'User', phone: '555-000-1111' });
     expect(transport.writes).toHaveLength(0);
+  });
+
+  it('phase 2 with the token saves exactly once', async () => {
+    const { harness: h, transport } = await setup(
+      (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/update/' }) : res({ body: UPDATE_FORM_HTML })),
+      (s, c) => registerAccountTools(s, c),
+    );
+    await confirmed(h, 'crowntown_update_account', { phone: '555-000-1111' });
+    expect(transport.writes).toHaveLength(1);
+  });
+
+  // The token binds the full form that will be re-saved, which includes the
+  // values read from the portal: an edit made elsewhere between the two calls
+  // means the save would no longer be what the user approved.
+  it('refuses phase 2 with DRAFT_CHANGED when the account changed on the portal in between', async () => {
+    let edited = false;
+    const { harness: h, transport } = await setup(
+      () => res({ body: edited ? UPDATE_FORM_HTML.replace('value="Test"', 'value="Other"') : UPDATE_FORM_HTML }),
+      (s, c) => registerAccountTools(s, c),
+    );
+    const phase1 = await call(h, 'crowntown_update_account', { phone: '555-000-1111' });
+    edited = true;
+    const raw = await h.callTool('crowntown_update_account', { phone: '555-000-1111', confirmToken: phase1.confirmToken });
+    expect(raw.isError).toBe(true);
+    expect(parseToolResult(raw)).toMatchObject({ error: 'DRAFT_CHANGED' });
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it('refuses before any gate when no field is given', async () => {
+    const { harness: h, transport } = await setup(() => res({ body: UPDATE_FORM_HTML }), (s, c) => registerAccountTools(s, c));
+    const out = await call(h, 'crowntown_update_account', {});
+    expect(out.error).toMatch(/at least one field/i);
+    expect(transport.requests).toHaveLength(0);
   });
 
   // Read-modify-write: untouched fields must be re-sent verbatim, and unchecked
@@ -304,7 +363,7 @@ describe('crowntown_update_account', () => {
       return res({ body: saved ? UPDATE_FORM_HTML.replace('value="555-555-5555"', 'value="555-000-1111"') : UPDATE_FORM_HTML });
     }, (s, c) => registerAccountTools(s, c));
 
-    const out = await call(h, 'crowntown_update_account', { phone: '555-000-1111', confirm: true });
+    const out = await confirmed(h, 'crowntown_update_account', { phone: '555-000-1111' });
     const body = new URLSearchParams(transport.writes[0].body!);
     expect(body.get('first_name')).toBe('Test');
     expect(body.get('last_name')).toBe('User');
@@ -318,7 +377,7 @@ describe('crowntown_update_account', () => {
     const { harness: h } = await setup((req) =>
       req.method === 'POST' ? res({ status: 302, location: '/accounts/update/' }) : res({ body: UPDATE_FORM_HTML }),
     (s, c) => registerAccountTools(s, c));
-    const out = await call(h, 'crowntown_update_account', { phone: '555-000-1111', confirm: true });
+    const out = await confirmed(h, 'crowntown_update_account', { phone: '555-000-1111' });
     expect(out.verified).toBe(false);
     expect(out.note).toMatch(/did not fully change/i);
   });
@@ -346,17 +405,24 @@ const MISSED_PICKUP_FORM_HTML = `<form method="post">
 const PORTAL = 'https://portal.crowntowncompost.com';
 
 describe('support write tools', () => {
-  it('report_missed_pickup makes no call without confirm', async () => {
+  it('report_missed_pickup phase 1 makes no call and returns a preview + confirmToken', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302 }), (s, c) => registerSupportTools(s, c));
     const out = await call(h, 'crowntown_report_missed_pickup', { date: 'Jul 24, 2026' });
-    expect(out.preview).toBe(true);
-    expect(out.wouldSend.date).toBe('2026-07-24');
+    expect(out.status).toBe('confirmation-required');
+    expect(out.confirmToken).toEqual(expect.any(String));
+    expect(out.preview.wouldSend).toEqual({ endpoint: '/accounts/report-missed-pickup/', date: '2026-07-24', comment: '' });
     expect(transport.requests).toHaveLength(0);
+  });
+
+  it('report_missed_pickup phase 2 submits exactly once', async () => {
+    const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
+    await confirmed(h, 'crowntown_report_missed_pickup', { date: '2026-07-24' });
+    expect(transport.writes).toHaveLength(1);
   });
 
   it('report_missed_pickup posts an ISO date + comment without following the redirect', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
-    const out = await call(h, 'crowntown_report_missed_pickup', { date: 'Friday, Jul 24, 2026', comment: 'bin was out', confirm: true });
+    const out = await confirmed(h, 'crowntown_report_missed_pickup', { date: 'Friday, Jul 24, 2026', comment: 'bin was out' });
     const body = new URLSearchParams(transport.writes[0].body!);
     // The portal's datepicker submits yyyy-mm-dd; a human date is normalised to it.
     expect(body.get('date')).toBe('2026-07-24');
@@ -370,13 +436,13 @@ describe('support write tools', () => {
 
   it('report_missed_pickup passes an ISO date through unchanged', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
-    await call(h, 'crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true });
+    await confirmed(h, 'crowntown_report_missed_pickup', { date: '2026-07-24' });
     expect(new URLSearchParams(transport.writes[0].body!).get('date')).toBe('2026-07-24');
   });
 
   it('report_missed_pickup rejects an unparseable date before sending anything', async () => {
     const { harness: h, transport } = await setup(() => res({ status: 302, location: '/accounts/' }), (s, c) => registerSupportTools(s, c));
-    const out = (await h.callTool('crowntown_report_missed_pickup', { date: 'last week', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    const out = (await h.callTool('crowntown_report_missed_pickup', { date: 'last week' })) as { isError?: boolean; content: Array<{ text: string }> };
     expect(out.isError).toBe(true);
     expect(out.content[0].text).toMatch(/date/i);
     expect(transport.writes).toHaveLength(0);
@@ -387,7 +453,7 @@ describe('support write tools', () => {
       () => res({ status: 200, url: `${PORTAL}/accounts/report-missed-pickup/`, body: MISSED_PICKUP_INVALID_HTML }),
       (s, c) => registerSupportTools(s, c),
     );
-    const out = (await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    const out = (await confirmedRaw(h, 'crowntown_report_missed_pickup', { date: '2026-07-24' })) as { isError?: boolean; content: Array<{ text: string }> };
     expect(out.isError).toBe(true);
     expect(out.content[0].text).toMatch(/not submitted|did not accept/i);
     expect(out.content[0].text).toContain('Enter a valid date.');
@@ -398,15 +464,36 @@ describe('support write tools', () => {
       () => res({ status: 200, url: `${PORTAL}/accounts/report-missed-pickup/`, body: MISSED_PICKUP_FORM_HTML }),
       (s, c) => registerSupportTools(s, c),
     );
-    const out = (await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24', confirm: true })) as { isError?: boolean };
+    const out = (await confirmedRaw(h, 'crowntown_report_missed_pickup', { date: '2026-07-24' })) as { isError?: boolean };
     expect(out.isError).toBe(true);
   });
 
-  it('contact_support makes no call without confirm', async () => {
-    const { harness: h, transport } = await setup(() => res({ status: 302 }), (s, c) => registerSupportTools(s, c));
+  // The support form pre-fills the reply-to email/phone from the account, so
+  // the tool reads it on every call: the preview shows the real values that
+  // will be sent, and a change to them between the calls is refused.
+  it('contact_support phase 1 sends nothing and previews the exact message, email and phone', async () => {
+    const { harness: h, transport } = await setup(() => res({ body: SUPPORT_FORM_HTML }), (s, c) => registerSupportTools(s, c));
     const out = await call(h, 'crowntown_contact_support', { message: 'hello' });
-    expect(out.preview).toBe(true);
-    expect(transport.requests).toHaveLength(0);
+    expect(out.status).toBe('confirmation-required');
+    expect(out.confirmToken).toEqual(expect.any(String));
+    expect(out.preview.wouldSend).toEqual({ endpoint: '/accounts/support/', message: 'hello', email: 'owner@example.com', phone: '555-123-4567' });
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it('contact_support phase 2 sends exactly once', async () => {
+    const { harness: h, transport } = await setup(
+      (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/' }) : res({ body: SUPPORT_FORM_HTML })),
+      (s, c) => registerSupportTools(s, c),
+    );
+    await confirmed(h, 'crowntown_contact_support', { message: 'hello' });
+    expect(transport.writes).toHaveLength(1);
+  });
+
+  it('contact_support previews "(not set)" when the form pre-fills nothing', async () => {
+    const bare = '<form><textarea name="message"></textarea><input name="email"><input name="phone" value=""></form>';
+    const { harness: h } = await setup(() => res({ body: bare }), (s, c) => registerSupportTools(s, c));
+    const out = await call(h, 'crowntown_contact_support', { message: 'hello' });
+    expect(out.preview.wouldSend).toEqual({ endpoint: '/accounts/support/', message: 'hello', email: '(not set)', phone: '(not set)' });
   });
 
   it('contact_support posts the message when confirmed', async () => {
@@ -414,7 +501,7 @@ describe('support write tools', () => {
       (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/' }) : res({ body: SUPPORT_FORM_HTML })),
       (s, c) => registerSupportTools(s, c),
     );
-    const out = await call(h, 'crowntown_contact_support', { message: 'please help', email: 'test@example.com', confirm: true });
+    const out = await confirmed(h, 'crowntown_contact_support', { message: 'please help', email: 'test@example.com' });
     const body = new URLSearchParams(transport.writes[0].body!);
     expect(body.get('message')).toBe('please help');
     expect(body.get('email')).toBe('test@example.com');
@@ -427,7 +514,7 @@ describe('support write tools', () => {
       (req) => (req.method === 'POST' ? res({ status: 302, location: '/accounts/' }) : res({ body: SUPPORT_FORM_HTML })),
       (s, c) => registerSupportTools(s, c),
     );
-    await call(h, 'crowntown_contact_support', { message: 'please help', confirm: true });
+    await confirmed(h, 'crowntown_contact_support', { message: 'please help' });
     const body = new URLSearchParams(transport.writes[0].body!);
     expect(body.get('email')).toBe('owner@example.com');
     expect(body.get('phone')).toBe('555-123-4567');
@@ -439,9 +526,61 @@ describe('support write tools', () => {
       (req) => (req.method === 'POST' ? res({ status: 200, url: `${PORTAL}/accounts/support/`, body: invalid }) : res({ body: SUPPORT_FORM_HTML })),
       (s, c) => registerSupportTools(s, c),
     );
-    const out = (await h.callTool('crowntown_contact_support', { message: 'x', confirm: true })) as { isError?: boolean; content: Array<{ text: string }> };
+    const out = (await confirmedRaw(h, 'crowntown_contact_support', { message: 'x' })) as { isError?: boolean; content: Array<{ text: string }> };
     expect(out.isError).toBe(true);
     expect(out.content[0].text).toContain('This field is required.');
+  });
+});
+
+describe('write confirmation', () => {
+  const OK = () => res({ status: 302, location: '/accounts/' });
+  const register = (s: Parameters<Parameters<typeof createTestHarness>[0]>[0], c: CrownTownClient) => registerSupportTools(s, c);
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it('refuses a replayed token with TOKEN_REUSED and does not write again', async () => {
+    const { harness: h, transport } = await setup(OK, register);
+    const args = { date: '2026-07-24', comment: 'bin was out' };
+    const phase1 = await call(h, 'crowntown_report_missed_pickup', args);
+    await h.callTool('crowntown_report_missed_pickup', { ...args, confirmToken: phase1.confirmToken });
+    expect(transport.writes).toHaveLength(1);
+    const replay = await h.callTool('crowntown_report_missed_pickup', { ...args, confirmToken: phase1.confirmToken });
+    expect(replay.isError).toBe(true);
+    expect(parseToolResult(replay)).toMatchObject({ error: 'TOKEN_REUSED' });
+    expect(transport.writes).toHaveLength(1);
+  });
+
+  it('refuses a token whose arguments changed with DRAFT_CHANGED and does not write', async () => {
+    const { harness: h, transport } = await setup(OK, register);
+    const phase1 = await call(h, 'crowntown_report_missed_pickup', { date: '2026-07-24', comment: 'bin was out' });
+    const out = await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24', comment: 'something else', confirmToken: phase1.confirmToken });
+    expect(out.isError).toBe(true);
+    expect(parseToolResult(out)).toMatchObject({ error: 'DRAFT_CHANGED' });
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it('writes when a prompt-capable client accepts the confirmation', async () => {
+    const { harness: h, transport } = await setup(OK, register, {
+      elicitation: async () => ({ action: 'accept', content: { confirmed: true } }),
+    });
+    const out = await call(h, 'crowntown_report_missed_pickup', { date: '2026-07-24' });
+    expect(out.submitted).toBe(true);
+    expect(transport.writes).toHaveLength(1);
+  });
+
+  it('does not write when a prompt-capable client declines the confirmation', async () => {
+    const { harness: h, transport } = await setup(OK, register, {
+      elicitation: async () => ({ action: 'decline' }),
+    });
+    await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24' });
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it('refuses the write under MCP_CONFIRM_MODE=refuse on a client that cannot prompt', async () => {
+    vi.stubEnv('MCP_CONFIRM_MODE', 'refuse');
+    const { harness: h, transport } = await setup(OK, register);
+    const out = await h.callTool('crowntown_report_missed_pickup', { date: '2026-07-24' });
+    expect(parseToolResult(out)).toMatchObject({ reason: 'confirmation-unsupported' });
+    expect(transport.writes).toHaveLength(0);
   });
 });
 
