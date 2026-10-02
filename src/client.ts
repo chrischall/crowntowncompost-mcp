@@ -1,7 +1,7 @@
 import { loadDotenvSafely, McpToolError } from '@chrischall/mcp-utils';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AuthManager, looksUnauthenticated } from './auth.js';
+import { AuthManager, looksUnauthenticated, throwIfEdgeBlocked } from './auth.js';
 import { FetchTransport, PORTAL_ORIGIN, type PortalResponse, type PortalTransport } from './transport.js';
 
 // Load `.env` next to the compiled entry point. `loadDotenvSafely` never throws;
@@ -12,6 +12,17 @@ try {
   await loadDotenvSafely({ path: join(__dirname, '..', '.env'), override: false });
 } catch {
   /* v8 ignore next -- only reached in a non-Node runtime with no .env to load */
+}
+
+/**
+ * A fresh login still landed on the login page — the session will not stick.
+ * Its own class so the healthcheck can report `session_expired`.
+ */
+export class SessionNotReestablishedError extends McpToolError {
+  constructor(message: string, opts: { hint: string }) {
+    super(message, opts);
+    this.name = 'SessionNotReestablishedError';
+  }
 }
 
 /** Metronic KTDatatable envelope: `{ meta, qs, data[] }`. */
@@ -56,6 +67,11 @@ export class CrownTownClient {
   constructor(opts: ClientOptions = {}) {
     this.transport = opts.transport ?? new FetchTransport();
     this.auth = opts.auth ?? new AuthManager(this.transport);
+  }
+
+  /** Which credential route is configured (`session_cookie` / `password`), or null. Never the value. */
+  credentialSource(): string | null {
+    return this.auth.credentialSource;
   }
 
   async fetchHtml(path: string): Promise<string> {
@@ -114,8 +130,12 @@ export class CrownTownClient {
     redirect: 'follow' | 'manual' = 'follow',
   ): Promise<PortalResponse> {
     const res = await this.auth.withSession(() => this.send(method, path, body, redirect));
+    // A CDN/WAF refusal page never reached the portal: name it, rather than
+    // reporting a dead session or a page that "may have moved"
+    // (chrischall/mcp-host#1015).
+    throwIfEdgeBlocked(res, method, path);
     if (looksUnauthenticated(res)) {
-      throw new McpToolError('Crown Town Compost session could not be (re)established after re-login.', {
+      throw new SessionNotReestablishedError('Crown Town Compost session could not be (re)established after re-login.', {
         hint: 'Your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD may be wrong, or the session keeps expiring. Verify the credentials.',
       });
     }

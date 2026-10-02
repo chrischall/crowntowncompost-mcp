@@ -1,4 +1,10 @@
-import { readEnvVar, McpToolError, CookieJar } from '@chrischall/mcp-utils';
+import {
+  readEnvVar,
+  McpToolError,
+  CookieJar,
+  EdgeBlockedError,
+  detectEdgeBlock,
+} from '@chrischall/mcp-utils';
 import { CookieSessionManager } from '@chrischall/mcp-utils/session';
 import { parse } from 'node-html-parser';
 import { PORTAL_ORIGIN, type PortalResponse, type PortalTransport } from './transport.js';
@@ -48,6 +54,44 @@ export function isConfigError(err: unknown): boolean {
   return err instanceof Error && (err as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] === true;
 }
 
+/** The service name {@link EdgeBlockedError} messages carry. */
+export const SERVICE = 'Crown Town Compost';
+
+/**
+ * The portal JUDGED the username and password and refused them (Django
+ * re-rendered the login form). Its own class so the healthcheck can report
+ * `credential_rejected` without matching message prose.
+ */
+export class LoginRejectedError extends McpToolError {
+  constructor(message: string, hint: string) {
+    super(message, { hint });
+    this.name = 'LoginRejectedError';
+  }
+}
+
+/**
+ * The supplied `CROWNTOWN_SESSION_COOKIE` is no longer honoured and there is
+ * no login pair to mint another. Carries the config marker too, so it stays
+ * permanent; its own class so the healthcheck can say `session_expired`.
+ */
+export class StaleSessionCookieError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StaleSessionCookieError';
+    (this as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] = true;
+  }
+}
+
+/**
+ * Throw {@link EdgeBlockedError} when a portal response is a CDN/WAF refusal
+ * page rather than Django's answer: the request never reached the portal, so
+ * the credentials or session were never judged (chrischall/mcp-host#1015).
+ */
+export function throwIfEdgeBlocked(res: PortalResponse, method: string, path: string): void {
+  const edge = detectEdgeBlock({ body: res.body, status: res.status });
+  if (edge !== null) throw new EdgeBlockedError(res.status, edge.vendor, { service: SERVICE, method, path });
+}
+
 // The Django portal signals an expired session by redirecting an authed request
 // back to /accounts/login/ (or rendering that login page with a 200). Detect it
 // from the final URL, the login-page body markers, or a manual 3xx Location.
@@ -79,6 +123,8 @@ export class AuthManager {
    */
   private suppliedCookieSpent = false;
   private readonly configError: Error | null;
+  /** Which credential route is configured, for the healthcheck. Never the value. */
+  readonly credentialSource: 'session_cookie' | 'password' | null;
   private readonly session: CookieSessionManager<PortalSession, PortalResponse>;
 
   constructor(private readonly transport: PortalTransport, opts: AuthOptions = {}) {
@@ -88,6 +134,7 @@ export class AuthManager {
     this.username = username;
     this.password = password;
     this.suppliedCookie = sessionCookie;
+    this.credentialSource = sessionCookie ? 'session_cookie' : username && password ? 'password' : null;
     // A supplied cookie is a complete configuration on its own; the login pair
     // is only needed to MINT one.
     this.configError =
@@ -127,8 +174,21 @@ export class AuthManager {
       persistence: persistence ?? undefined,
       onPersistError: reportCacheWriteFailure,
       isExpired: looksUnauthenticated,
-      isPermanentError: (err) =>
-        err instanceof Error && (err as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] === true,
+      // The re-login after an expired session failed. The manager's default
+      // returns the stale login page, which reads as "session could not be
+      // re-established" — true but unactionable. Surface the failures that
+      // say what to do instead: a dead supplied cookie, a refused password,
+      // or a CDN/WAF block that the credentials never reached.
+      onReplayLoginError: (err) => {
+        if (
+          err instanceof StaleSessionCookieError ||
+          err instanceof LoginRejectedError ||
+          err instanceof EdgeBlockedError
+        ) {
+          throw err;
+        }
+      },
+      isPermanentError: isConfigError,
     });
   }
 
@@ -190,19 +250,20 @@ export class AuthManager {
     // say the cookie is stale rather than reporting it as never configured,
     // which is what an operator who set it on purpose would otherwise be told.
     if (this.suppliedCookieSpent && !(this.username && this.password)) {
-      const stale = new Error(
+      throw new StaleSessionCookieError(
         'The supplied CROWNTOWN_SESSION_COOKIE is no longer valid — the portal redirected back to the ' +
           'login page. Supply a fresh session cookie, or set CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD ' +
           'so a new session can be minted automatically.',
       );
-      (stale as { [CONFIG_ERROR_MARKER]?: true })[CONFIG_ERROR_MARKER] = true;
-      throw stale;
     }
 
     const jar = new CookieJar();
 
     // 1. GET the login page to obtain the csrftoken cookie + the hidden form token.
     const page = await this.transport.request({ method: 'GET', path: LOGIN_PATH, redirect: 'follow' });
+    // A refusal page here means the credentials would be POSTed into a block:
+    // stop before spending a login attempt on it.
+    throwIfEdgeBlocked(page, 'GET', LOGIN_PATH);
     jar.absorb(page.setCookie);
     const formToken = extractCsrfInput(page.body);
     const cookieToken = jar.get('csrftoken');
@@ -231,6 +292,7 @@ export class AuthManager {
       body,
       redirect: 'manual',
     });
+    throwIfEdgeBlocked(res, 'POST', LOGIN_PATH);
     jar.absorb(res.setCookie);
 
     // Success = a 302 whose Location is NOT the login page (Django redirects to
@@ -238,15 +300,18 @@ export class AuthManager {
     const redirectedAway =
       (res.status === 301 || res.status === 302) && !!res.location && !LOGIN_URL_RE.test(res.location);
     if (!redirectedAway || !jar.get('sessionid')) {
-      const status = res.status;
-      throw new McpToolError(
-        'Crown Town Compost login failed — check your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD.',
-        {
-          hint:
-            status === 403
-              ? 'The portal rejected the login request (CSRF/Referer). This is usually transient — retry.'
-              : 'Verify the username/email and password are correct for portal.crowntowncompost.com.',
-        },
+      const message = 'Crown Town Compost login failed — check your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD.';
+      // Only a 200 re-render of the login form is Django judging the
+      // credentials. A 403 is its CSRF/Referer check, which never looked at
+      // them — so it stays a plain error the healthcheck reports by status.
+      if (res.status === 403) {
+        throw new McpToolError(message, {
+          hint: 'The portal rejected the login request (CSRF/Referer). This is usually transient — retry.',
+        });
+      }
+      throw new LoginRejectedError(
+        message,
+        'Verify the username/email and password are correct for portal.crowntowncompost.com.',
       );
     }
     return { jar };
