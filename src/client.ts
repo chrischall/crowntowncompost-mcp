@@ -1,7 +1,7 @@
 import { loadDotenvSafely, McpToolError } from '@chrischall/mcp-utils';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AuthManager, looksUnauthenticated, throwIfEdgeBlocked } from './auth.js';
+import { AuthManager, looksUnauthenticated, PortalHttpError, throwIfEdgeBlocked } from './auth.js';
 import { FetchTransport, PORTAL_ORIGIN, type PortalResponse, type PortalTransport } from './transport.js';
 
 // Load `.env` next to the compiled entry point. `loadDotenvSafely` never throws;
@@ -141,9 +141,11 @@ export class CrownTownClient {
     }
     this.auth.absorb(res.setCookie);
     if (res.status >= 400) {
-      throw new McpToolError(`Crown Town Compost request failed: ${method} ${path} -> HTTP ${res.status}`, {
-        hint: 'Retry; if it persists the page may have moved or requires a different account.',
-      });
+      throw new PortalHttpError(
+        res.status,
+        `Crown Town Compost request failed: ${method} ${path} -> HTTP ${res.status}`,
+        'Retry; if it persists the page may have moved or requires a different account.',
+      );
     }
     return res;
   }

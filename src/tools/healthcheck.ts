@@ -4,7 +4,7 @@ import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import { runCredentialHealthcheck } from '@chrischall/mcp-utils/healthcheck';
 import { SessionNotReestablishedError, type CrownTownClient } from '../client.js';
 import { parseDashboard, type DashboardSummary } from '../parse.js';
-import { LoginRejectedError, StaleSessionCookieError } from '../auth.js';
+import { LoginRejectedError, PortalHttpError, StaleSessionCookieError } from '../auth.js';
 
 const NO_CREDENTIAL_HINT =
   'Crown Town Compost is not configured — set CROWNTOWN_SESSION_COOKIE (a signed-in portal session you already hold), ' +
@@ -22,6 +22,9 @@ export function classifyCrownTownError(err: unknown): { kind: string; hint?: str
       hint: 'portal.crowntowncompost.com refused the login — verify CROWNTOWN_USERNAME (username or email) and CROWNTOWN_PASSWORD.',
     };
   }
+  // An error status the portal returned is never a verdict on the credentials
+  // — not even a 403, which the shared ladder would otherwise read as one.
+  if (err instanceof PortalHttpError) return { kind: 'http', hint: err.hint };
   if (err instanceof StaleSessionCookieError) return { kind: 'session_expired', hint: err.message };
   if (err instanceof SessionNotReestablishedError) return { kind: 'session_expired', hint: err.hint };
   return undefined;

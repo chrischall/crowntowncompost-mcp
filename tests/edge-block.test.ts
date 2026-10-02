@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EdgeBlockedError } from '@chrischall/mcp-utils';
-import { createTestHarness, parseToolResult } from '@chrischall/mcp-utils/test';
+import { createTestHarness, parseToolResult } from './helpers.js';
 import { CrownTownClient } from '../src/client.js';
-import { AuthManager } from '../src/auth.js';
+import { AuthManager, LoginRejectedError, PortalHttpError } from '../src/auth.js';
 import type { PortalRequest, PortalResponse, PortalTransport } from '../src/transport.js';
 import { registerHealthcheckTools } from '../src/tools/healthcheck.js';
 import { DASHBOARD_HTML, LOGIN_PAGE_HTML } from './fixtures/pages.js';
@@ -196,5 +196,58 @@ describe('re-login after an expired session surfaces the actionable failure', ()
     const t = new Router({ loginPost: () => res({ status: 403, body: 'CSRF verification failed' }), page: EXPIRED });
     const out = await healthcheck(clientFor(t, { sessionCookie: 'sessionid=dead', username: 'u', password: 'p' }));
     expect(out.error).toMatchObject({ kind: 'session_expired' });
+  });
+});
+
+describe('login POST failures are classified by what the portal actually said', () => {
+  const SITE_ERROR = (status: number) => () => res({ status, body: '<h1>Server Error (' + status + ')</h1>' });
+
+  it.each([500, 502, 503])('a genuine %i on the login POST is http, never credential_rejected', async (status) => {
+    const t = new Router({ loginPost: SITE_ERROR(status), page: () => res({ body: DASHBOARD_HTML }) });
+    const err = await clientFor(t).fetchHtml('/accounts/').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PortalHttpError);
+    expect(err).not.toBeInstanceOf(LoginRejectedError);
+    expect((err as PortalHttpError).status).toBe(status);
+    expect((err as Error).message).not.toMatch(/CROWNTOWN_PASSWORD/);
+
+    const out = await healthcheck(clientFor(new Router({ loginPost: SITE_ERROR(status), page: () => res({ body: DASHBOARD_HTML }) })));
+    expect(out.error).toMatchObject({ kind: 'http' });
+    expect(out.hint).not.toMatch(/CROWNTOWN_PASSWORD/);
+  });
+
+  it('a non-block 403 on the login POST (Django CSRF/Referer) is http, not credential_rejected', async () => {
+    const t = new Router({ loginPost: () => res({ status: 403, body: 'CSRF verification failed' }), page: () => res({ body: DASHBOARD_HTML }) });
+    const err = await clientFor(t).fetchHtml('/accounts/').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PortalHttpError);
+    expect((err as PortalHttpError).status).toBe(403);
+    const out = await healthcheck(clientFor(new Router({ loginPost: () => res({ status: 403, body: 'CSRF verification failed' }), page: () => res({ body: DASHBOARD_HTML }) })));
+    expect(out.error).toMatchObject({ kind: 'http' });
+    expect(out.hint).toMatch(/CSRF/);
+  });
+
+  it('a block page on the login POST is edge_blocked', async () => {
+    const out = await healthcheck(clientFor(new Router({ loginPost: () => blocked(), page: () => res({ body: DASHBOARD_HTML }) })));
+    expect(out.error).toMatchObject({ kind: 'edge_blocked', detail: { vendor: 'CloudFront' } });
+  });
+
+  it('a 200 that is not the login form and set no session is not blamed on the password', async () => {
+    const t = new Router({ loginPost: () => res({ status: 200, body: '<p>Maintenance</p>' }), page: () => res({ body: DASHBOARD_HTML }) });
+    const err = await clientFor(t).fetchHtml('/accounts/').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(LoginRejectedError);
+  });
+
+  it('control — the re-rendered login form is still LoginRejectedError / credential_rejected', async () => {
+    const t = new Router({ loginPost: () => LOGIN_REJECTED, page: () => res({ body: DASHBOARD_HTML }) });
+    const err = await clientFor(t).fetchHtml('/accounts/').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LoginRejectedError);
+    const out = await healthcheck(clientFor(new Router({ loginPost: () => LOGIN_REJECTED, page: () => res({ body: DASHBOARD_HTML }) })));
+    expect(out.error).toMatchObject({ kind: 'credential_rejected' });
+  });
+
+  it('a 5xx on a portal page carries its status and reads http', async () => {
+    const out = await healthcheck(clientFor(new Router({ page: () => res({ status: 502, body: 'Bad Gateway' }) })));
+    expect(out.error).toMatchObject({ kind: 'http' });
+    expect(out.probe).toMatchObject({ status: 502 });
   });
 });

@@ -58,6 +58,24 @@ export function isConfigError(err: unknown): boolean {
 export const SERVICE = 'Crown Town Compost';
 
 /**
+ * The portal answered with an error status that is NOT a verdict on the
+ * credentials — a 5xx site error, or Django's CSRF/Referer 403, which rejects
+ * the request before the username and password are looked at. Carries the
+ * status so the healthcheck reports `http`, never `credential_rejected`
+ * (chrischall/mcp-host#1015).
+ */
+export class PortalHttpError extends McpToolError {
+  constructor(
+    readonly status: number,
+    message: string,
+    hint: string,
+  ) {
+    super(message, { hint });
+    this.name = 'PortalHttpError';
+  }
+}
+
+/**
  * The portal JUDGED the username and password and refused them (Django
  * re-rendered the login form). Its own class so the healthcheck can report
  * `credential_rejected` without matching message prose.
@@ -300,18 +318,31 @@ export class AuthManager {
     const redirectedAway =
       (res.status === 301 || res.status === 302) && !!res.location && !LOGIN_URL_RE.test(res.location);
     if (!redirectedAway || !jar.get('sessionid')) {
-      const message = 'Crown Town Compost login failed — check your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD.';
-      // Only a 200 re-render of the login form is Django judging the
-      // credentials. A 403 is its CSRF/Referer check, which never looked at
-      // them — so it stays a plain error the healthcheck reports by status.
-      if (res.status === 403) {
-        throw new McpToolError(message, {
-          hint: 'The portal rejected the login request (CSRF/Referer). This is usually transient — retry.',
-        });
+      // Only the login form coming back — re-rendered, or redirected to — is
+      // Django judging the credentials. An error status (a 5xx, or the
+      // CSRF/Referer 403 that never looked at them) is the portal failing, and
+      // any other answer is unexpected; neither says the password is wrong
+      // (chrischall/mcp-host#1015).
+      if (res.status >= 400) {
+        throw new PortalHttpError(
+          res.status,
+          `Crown Town Compost login request failed: POST ${LOGIN_PATH} -> HTTP ${res.status}.`,
+          res.status === 403
+            ? 'The portal rejected the login request (CSRF/Referer) before checking the credentials. This is usually transient — retry.'
+            : 'The portal returned an error before judging the credentials. This is a portal-side problem — retry later.',
+        );
       }
-      throw new LoginRejectedError(
-        message,
-        'Verify the username/email and password are correct for portal.crowntowncompost.com.',
+      const formReRendered = res.status === 200 && (LOGIN_BODY_RE.test(res.body) || LOGIN_URL_RE.test(res.url));
+      const sentBackToForm = (res.status === 301 || res.status === 302) && !!res.location && LOGIN_URL_RE.test(res.location);
+      if (formReRendered || sentBackToForm) {
+        throw new LoginRejectedError(
+          'Crown Town Compost login failed — check your CROWNTOWN_USERNAME / CROWNTOWN_PASSWORD.',
+          'Verify the username/email and password are correct for portal.crowntowncompost.com.',
+        );
+      }
+      throw new McpToolError(
+        `Crown Town Compost login did not establish a session (POST ${LOGIN_PATH} -> HTTP ${res.status}).`,
+        { hint: 'The portal answered the login unexpectedly. Retry; if it persists, the login flow may have changed.' },
       );
     }
     return { jar };
