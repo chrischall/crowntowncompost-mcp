@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.2](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.1...v1.1.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* **deps:** bump @chrischall/mcp-utils to 2.12.0 ([#93](https://github.com/chrischall/crowntowncompost-mcp/issues/93)) ([ab5ba1d](https://github.com/chrischall/crowntowncompost-mcp/commit/ab5ba1d4f3ac98462f185fd77399fba152a1a942))
+* **deps:** bump @chrischall/mcp-utils to 2.13.0 ([#96](https://github.com/chrischall/crowntowncompost-mcp/issues/96)) ([b8aad5e](https://github.com/chrischall/crowntowncompost-mcp/commit/b8aad5e55b7a5f5df484e67b7cc16a663c309943))
+* **deps:** bump the production-dependencies group with 3 updates ([#88](https://github.com/chrischall/crowntowncompost-mcp/issues/88)) ([588b6ee](https://github.com/chrischall/crowntowncompost-mcp/commit/588b6eed310251dc343ae0107790970c9c7783fd))
+* **healthcheck:** report why crowntown_healthcheck failed and stop blaming the password for CDN blocks ([#94](https://github.com/chrischall/crowntowncompost-mcp/issues/94)) ([c9089ca](https://github.com/chrischall/crowntowncompost-mcp/commit/c9089ca1f6dca05ca9a6036afe232f07fdd9e10d))
+* keep credentials and report edge_blocked on CDN/WAF blocks (mcp-utils 2.10.0) ([#91](https://github.com/chrischall/crowntowncompost-mcp/issues/91)) ([2de2be7](https://github.com/chrischall/crowntowncompost-mcp/commit/2de2be731c62a0156b30b09cf6b181774c2b5d97))
+* keep write approvals valid across a hosted restart (mcp-utils 2.11.0) ([#92](https://github.com/chrischall/crowntowncompost-mcp/issues/92)) ([06b2312](https://github.com/chrischall/crowntowncompost-mcp/commit/06b23124af07ac4af55594621b18763f9093f339))
+* report CDN/WAF blocks as edge_blocked, not a rejected credential (mcp-utils 2.9.0) ([#90](https://github.com/chrischall/crowntowncompost-mcp/issues/90)) ([d22361b](https://github.com/chrischall/crowntowncompost-mcp/commit/d22361bbeaa4abfb0276765ec18326bcbec74407))
+
 ## [1.1.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.0...v1.1.1) (2026-09-24)
 
 
