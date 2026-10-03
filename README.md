@@ -59,7 +59,7 @@ host's install-time probe succeeds); the configuration error surfaces on the fir
 
 | Tool | What it returns |
 |---|---|
-| `crowntown_healthcheck` | Whether credentials work, plus account status — distinguishes "no creds" from "bad creds" from "site error" |
+| `crowntown_healthcheck` | Whether credentials work, plus account status; on failure `error.kind` says which hop broke (`no_credential`, `credential_rejected`, `session_expired`, `edge_blocked`, `timeout`, `transport`, `http`) |
 | `crowntown_get_dashboard` | Account status, subscription (plan, price, renewal date), next service date, service addresses + pickup days, and your environmental impact |
 | `crowntown_get_account` | Contact details and notification preferences |
 | `crowntown_get_pickup_schedule` | Pickup day(s) and time window per address — the official set-out-by time plus an observed arrival window (earliest/latest/typical, consistent vs varies) derived from your collection history |
