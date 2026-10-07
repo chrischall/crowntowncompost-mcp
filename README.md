@@ -77,7 +77,7 @@ host's install-time probe succeeds); the configuration error surfaces on the fir
 | `crowntown_contact_support` | Send a message to customer support |
 
 Every mutating tool asks you to confirm before it writes anything. A client that can show a
-confirmation prompt (Claude Code) gets that prompt. Elsewhere (claude.ai, Claude Desktop) the first
+confirmation prompt (Claude Code) gets that prompt (unless `MCP_CONFIRM_ELICITATION=off`). Elsewhere (claude.ai, Claude Desktop) the first
 call sends nothing and returns `status: "confirmation-required"` with a preview of exactly what would
 be sent plus a `confirmToken`; only a repeat call with the same arguments and that token proceeds.
 The token works once, expires, and is refused (`DRAFT_CHANGED`) if what would be sent changed in
@@ -90,7 +90,8 @@ messages, missed-pickup reports) it says so rather than claiming success.
 
 | variable | default | |
 |---|---|---|
-| `MCP_CONFIRM_MODE` | `ask-user` | What a write does on a client that cannot show a confirmation prompt (claude.ai, Claude Desktop). `ask-user`: two steps — the first call does nothing and returns a preview plus a token, and the model must get your approval in chat before calling again with it. `auto`: the same two steps, but the model may use the token after reviewing the preview itself. `refuse`: writes are refused on such clients. A client that can show prompts (Claude Code) always gets the real prompt. An unrecognised value is treated as `refuse`. |
+| `MCP_CONFIRM_MODE` | `ask-user` | What a write does on a client that cannot show a confirmation prompt (claude.ai, Claude Desktop). `ask-user`: two steps — the first call does nothing and returns a preview plus a token, and the model must get your approval in chat before calling again with it. `auto`: the same two steps, but the model may use the token after reviewing the preview itself. `refuse`: writes are refused on such clients. A client that can show prompts (Claude Code) always gets the real prompt, unless `MCP_CONFIRM_ELICITATION=off`. An unrecognised value is treated as `refuse`. |
+| `MCP_CONFIRM_ELICITATION` | `on` | `off` never shows a confirmation prompt, so every client gets the `MCP_CONFIRM_MODE` behaviour. Set it for a client that says it can show prompts but never does (the write hangs — opencode 2.0.x). Any other value is treated as `on`, with a warning on stderr. |
 | `MCP_CONFIRM_TTL_SECONDS` | `600` | How long a token stays valid. |
 | `MCP_CONFIRM_SECRET` | random per process | Signing key; set it only if tokens must survive a server restart. |
 
