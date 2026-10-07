@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.4](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.3...v1.1.4) (2026-10-07)
+
+
+### Bug Fixes
+
+* **deps:** bump source-map-js ([#101](https://github.com/chrischall/crowntowncompost-mcp/issues/101)) ([9a77958](https://github.com/chrischall/crowntowncompost-mcp/commit/9a77958f8a40d3fabb29daf9caa54799f0598402))
+* **deps:** let MCP_CONFIRM_ELICITATION=off skip confirmation prompts on clients that never show them ([#99](https://github.com/chrischall/crowntowncompost-mcp/issues/99)) ([4dfa43d](https://github.com/chrischall/crowntowncompost-mcp/commit/4dfa43d2cfb533e1b32da4700c71740b8e423e8f))
+
+
+### Documentation
+
+* document MCP_CONFIRM_ELICITATION ([#102](https://github.com/chrischall/crowntowncompost-mcp/issues/102)) ([bf12dbf](https://github.com/chrischall/crowntowncompost-mcp/commit/bf12dbfee1bd6196d6f766e54e1c456018ed8c8a))
+
 ## [1.1.3](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.2...v1.1.3) (2026-10-05)
 
 
