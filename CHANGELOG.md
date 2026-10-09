@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.5](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.4...v1.1.5) (2026-10-09)
+
+
+### Bug Fixes
+
+* annotate tools truthfully and sync manifests with the served tools ([#109](https://github.com/chrischall/crowntowncompost-mcp/issues/109)) ([6da04f8](https://github.com/chrischall/crowntowncompost-mcp/commit/6da04f863d3d952a78445f84ade8fc5e8d46ee4f))
+* declare the plugin MCP config under the mcpServers key Claude Code reads ([#110](https://github.com/chrischall/crowntowncompost-mcp/issues/110)) ([734e53c](https://github.com/chrischall/crowntowncompost-mcp/commit/734e53cb73f7f70de42c51061ff123f8800c9800))
+* **deps:** bump the production-dependencies group with 2 updates ([#107](https://github.com/chrischall/crowntowncompost-mcp/issues/107)) ([45a2cc5](https://github.com/chrischall/crowntowncompost-mcp/commit/45a2cc53f30381d4dc406f965a6f4354532151e9))
+* **deps:** update @chrischall/mcp-utils to 3.0.0 ([#108](https://github.com/chrischall/crowntowncompost-mcp/issues/108)) ([9eb7a0c](https://github.com/chrischall/crowntowncompost-mcp/commit/9eb7a0cec5a875ca5113801fa85891ca0b9cd61a))
+* resolve low-severity audit findings ([#103](https://github.com/chrischall/crowntowncompost-mcp/issues/103)) ([aea8daf](https://github.com/chrischall/crowntowncompost-mcp/commit/aea8daf6e6679dce5f564f717a6d6437e762897b))
+
 ## [1.1.4](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.3...v1.1.4) (2026-10-07)
 
 
