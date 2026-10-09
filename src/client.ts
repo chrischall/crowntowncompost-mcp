@@ -50,6 +50,9 @@ export interface DatatableQuery {
   query?: Record<string, string>;
 }
 
+/** An authenticated page whose GET sets Django's csrftoken cookie. */
+const CSRF_MINT_PATH = '/accounts/';
+
 export interface ClientOptions {
   transport?: PortalTransport;
   auth?: AuthManager;
@@ -129,6 +132,7 @@ export class CrownTownClient {
     body?: string,
     redirect: 'follow' | 'manual' = 'follow',
   ): Promise<PortalResponse> {
+    if (method === 'POST') await this.ensureCsrfToken();
     const res = await this.auth.withSession(() => this.send(method, path, body, redirect));
     // A CDN/WAF refusal page never reached the portal: name it, rather than
     // reporting a dead session or a page that "may have moved"
@@ -150,6 +154,23 @@ export class CrownTownClient {
     return res;
   }
 
+  /**
+   * Make sure the jar holds a `csrftoken` before a POST. A password login always
+   * leaves one, but a supplied CROWNTOWN_SESSION_COOKIE may carry only
+   * `sessionid`, and Django 403s a POST with an empty X-CSRFToken. The portal
+   * sets the cookie on any authenticated GET, so mint one from the dashboard;
+   * if even that yields none, refuse with a hint rather than a bare 403.
+   */
+  private async ensureCsrfToken(): Promise<void> {
+    await this.auth.ensureLogin();
+    if (this.auth.csrfToken()) return;
+    await this.requestWithSession('GET', CSRF_MINT_PATH);
+    if (this.auth.csrfToken()) return;
+    throw new McpToolError('Crown Town Compost has no csrftoken cookie for this session, so the portal would reject the POST.', {
+      hint: 'Include csrftoken in CROWNTOWN_SESSION_COOKIE (copy the whole Cookie header: "sessionid=…; csrftoken=…"), or set CROWNTOWN_USERNAME and CROWNTOWN_PASSWORD instead.',
+    });
+  }
+
   private send(method: 'GET' | 'POST', path: string, body: string | undefined, redirect: 'follow' | 'manual'): Promise<PortalResponse> {
     const headers: Record<string, string> = { Cookie: this.auth.cookieHeader() };
     if (method === 'POST') {
@@ -168,16 +189,6 @@ export class CrownTownClient {
     // out ('manual') because for a form POST the redirect itself is the verdict.
     return this.transport.request({ method, path, headers, body, redirect });
   }
-}
-
-/**
- * Build a per-user client from injected credentials — the constructor seam the
- * hosted per-user deployment uses. Each call mints its own transport +
- * AuthManager, so concurrent sessions never share a cookie jar.
- */
-export function createDirectClient(opts: { username?: string; password?: string }): CrownTownClient {
-  const transport = new FetchTransport();
-  return new CrownTownClient({ transport, auth: new AuthManager(transport, opts) });
 }
 
 /**
