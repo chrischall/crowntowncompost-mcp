@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { CrownTownClient, createDirectClient } from '../src/client.js';
+import { CrownTownClient } from '../src/client.js';
+import * as clientModule from '../src/client.js';
 import { AuthManager } from '../src/auth.js';
 import type { PortalRequest, PortalResponse, PortalTransport } from '../src/transport.js';
 import { LOGIN_PAGE_HTML } from './fixtures/pages.js';
@@ -168,19 +169,14 @@ describe('CrownTownClient.submitForm', () => {
   });
 });
 
-describe('createDirectClient', () => {
-  // The per-user seam: each call must mint its OWN transport + AuthManager, so
-  // two concurrent sessions never share a cookie jar. Its only previous
-  // exercise went with the Worker suite.
-  it('mints independent clients that do not share auth state', () => {
-    const a = createDirectClient({ username: 'a@example.com', password: 'pw-a' });
-    const b = createDirectClient({ username: 'b@example.com', password: 'pw-b' });
-    expect(a).toBeInstanceOf(CrownTownClient);
-    expect(b).toBeInstanceOf(CrownTownClient);
-    expect(a).not.toBe(b);
-    // Distinct AuthManager instances — a shared one is the cookie-jar bug.
-    expect((a as unknown as { auth: AuthManager }).auth).not.toBe(
-      (b as unknown as { auth: AuthManager }).auth,
-    );
+describe('per-user client seam', () => {
+  // createDirectClient forwarded only username/password, so AuthManager filled
+  // the rest from process env: an operator CROWNTOWN_SESSION_COOKIE in the host
+  // would have signed every "per-user" client into the operator's account.
+  // Nothing called it, so it was removed rather than fixed
+  // (chrischall/fleet-audit#398). A per-user seam must not come back without
+  // an explicit no-env-fallback mode.
+  it('is not exported', () => {
+    expect('createDirectClient' in clientModule).toBe(false);
   });
 });

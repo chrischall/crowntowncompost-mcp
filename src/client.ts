@@ -171,16 +171,6 @@ export class CrownTownClient {
 }
 
 /**
- * Build a per-user client from injected credentials — the constructor seam the
- * hosted per-user deployment uses. Each call mints its own transport +
- * AuthManager, so concurrent sessions never share a cookie jar.
- */
-export function createDirectClient(opts: { username?: string; password?: string }): CrownTownClient {
-  const transport = new FetchTransport();
-  return new CrownTownClient({ transport, auth: new AuthManager(transport, opts) });
-}
-
-/**
  * Module-level singleton for the stdio server (deferred-config-error pattern).
  *
  * This constructor must stay PURE. The singleton below is built while the
