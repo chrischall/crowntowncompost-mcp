@@ -397,6 +397,20 @@ describe('crowntown_update_account', () => {
     expect(out.verified).toBe(true);
   });
 
+  // parseAccountDetails returns '' / false for anything it cannot find, so a
+  // drifted or wrong page used to yield a body that blanked the names and
+  // switched both notifications off (chrischall/fleet-audit#394).
+  it.each([
+    ['the page is not the form', '<h1>Something went wrong</h1>'],
+    ['a field is missing', UPDATE_FORM_HTML.replace(/<input[^>]*name="service_notifications"[^>]*>/, '')],
+  ])('refuses to preview or save when %s', async (_label, body) => {
+    const { harness: h, transport } = await setup(() => res({ body }), (s, c) => registerAccountTools(s, c));
+    const raw = await h.callTool('crowntown_update_account', { phone: '555-000-1111' });
+    expect(raw.isError).toBe(true);
+    expect((raw.content as Array<{ text: string }>)[0]!.text).toMatch(/account form/i);
+    expect(transport.writes).toHaveLength(0);
+  });
+
   it('reports verified:false when the re-read shows the save did not stick', async () => {
     const { harness: h } = await setup((req) =>
       req.method === 'POST' ? res({ status: 302, location: '/accounts/update/' }) : res({ body: UPDATE_FORM_HTML }),

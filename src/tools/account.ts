@@ -3,10 +3,12 @@ import { z } from 'zod';
 import {
   confirmationFromEnv,
   confirmTokenParam,
+  McpToolError,
   minifiedResult,
   requireConfirmationWithFallback,
   toolAnnotations,
 } from '@chrischall/mcp-utils';
+import { parse } from 'node-html-parser';
 import { viewArg, viewResponse } from '../view.js';
 import type { CrownTownClient } from '../client.js';
 import {
@@ -17,6 +19,19 @@ import {
 } from '../parse.js';
 
 const UPDATE_PATH = '/accounts/update/';
+
+/** Every input the update form must carry for a read-modify-write to be safe. */
+const ACCOUNT_FORM_FIELDS = ['first_name', 'last_name', 'phone', 'send_email_reminders', 'service_notifications'] as const;
+
+/**
+ * The account-form inputs absent from `html`. parseAccountDetails reads a
+ * missing input as '' / false, which a re-save would then write back — blanking
+ * the names and switching notifications off — so a write must check first.
+ */
+export function missingAccountFields(html: string): string[] {
+  const root = parse(html);
+  return ACCOUNT_FORM_FIELDS.filter((name) => root.querySelector(`input[name="${name}"]`) === null);
+}
 
 /** Build the update form body from current values overlaid with the requested changes. */
 export function buildUpdateBody(
@@ -127,7 +142,15 @@ export function registerAccountTools(
             'Specify at least one field to change (first_name, last_name, phone, send_email_reminders, service_notifications).',
         });
       }
-      const current = parseAccountDetails(await client.fetchHtml(UPDATE_PATH));
+      const formHtml = await client.fetchHtml(UPDATE_PATH);
+      const missing = missingAccountFields(formHtml);
+      if (missing.length > 0) {
+        throw new McpToolError(
+          `Could not read the account form at ${UPDATE_PATH} (missing: ${missing.join(', ')}), so nothing was changed.`,
+          { hint: 'The portal page may have changed shape. Update the account on portal.crowntowncompost.com, or retry later.' },
+        );
+      }
+      const current = parseAccountDetails(formHtml);
       const { body, next } = buildUpdateBody(current, provided);
       const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
         action: 'account.update',
