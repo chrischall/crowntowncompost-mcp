@@ -169,6 +169,43 @@ describe('CrownTownClient.submitForm', () => {
   });
 });
 
+describe('supplied session cookie without a csrftoken', () => {
+  // An operator who pastes only `sessionid=...` into CROWNTOWN_SESSION_COOKIE
+  // left the jar with no csrftoken, so every POST went out with an empty
+  // X-CSRFToken and Django 403'd it (chrischall/fleet-audit#396).
+  function cookieClient(handler: (req: PortalRequest) => PortalResponse) {
+    const transport = new MockTransport((req) => handler(req));
+    const auth = new AuthManager(transport, { sessionCookie: 'sessionid=SESSION' });
+    return { client: new CrownTownClient({ transport, auth }), transport };
+  }
+
+  it('mints a csrftoken with a GET before the first POST, and sends it', async () => {
+    const { client, transport } = cookieClient((req) =>
+      req.method === 'GET' ? res({ body: '<h1>dash</h1>', setCookie: ['csrftoken=MINTED; Path=/'] }) : json(DATATABLE_BODY),
+    );
+    await client.datatable('/accounts/stops/api/');
+    expect(transport.requests.map((r) => r.method)).toEqual(['GET', 'POST']);
+    expect(transport.requests[1].headers!['X-CSRFToken']).toBe('MINTED');
+    // Minted once: the next POST reuses it.
+    await client.datatable('/accounts/stops/api/');
+    expect(transport.requests.map((r) => r.method)).toEqual(['GET', 'POST', 'POST']);
+  });
+
+  it('refuses to POST, naming the missing csrftoken, when no page sets one', async () => {
+    const { client, transport } = cookieClient(() => res({ body: '<h1>dash</h1>' }));
+    await expect(client.submitForm('/accounts/support/', 'message=hi')).rejects.toThrow(/csrftoken/);
+    expect(transport.requests.filter((r) => r.method === 'POST')).toHaveLength(0);
+  });
+
+  it('does not mint when the supplied cookie already carries a csrftoken', async () => {
+    const transport = new MockTransport(() => json(DATATABLE_BODY));
+    const auth = new AuthManager(transport, { sessionCookie: 'sessionid=SESSION; csrftoken=GIVEN' });
+    await new CrownTownClient({ transport, auth }).datatable('/accounts/stops/api/');
+    expect(transport.requests.map((r) => r.method)).toEqual(['POST']);
+    expect(transport.requests[0].headers!['X-CSRFToken']).toBe('GIVEN');
+  });
+});
+
 describe('per-user client seam', () => {
   // createDirectClient forwarded only username/password, so AuthManager filled
   // the rest from process env: an operator CROWNTOWN_SESSION_COOKIE in the host
