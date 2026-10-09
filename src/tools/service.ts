@@ -221,7 +221,8 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ rid, clid, action, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { rid, clid, action, confirmToken } = args;
       const wouldSend = { endpoint: SKIP_ENDPOINT, rid, clid, action };
       const gate = await requireConfirmationWithFallback(ctx, confirmationFromEnv({
         action: 'service.skip',
@@ -229,6 +230,9 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
         details: wouldSend,
         tool: 'crowntown_skip_service',
         confirmToken,
+        // Single-account server: the session is whichever CROWNTOWN_* login is configured.
+        account: undefined,
+        args,
         subject: () => ({
           target: `${rid}:${clid}`,
           payload: wouldSend,

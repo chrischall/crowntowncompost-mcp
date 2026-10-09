@@ -107,7 +107,8 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ date: rawDate, comment, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { date: rawDate, comment, confirmToken } = args;
       const date = toPortalDate(rawDate);
       if (date === null) {
         throw new McpToolError(`Could not read "${rawDate}" as a calendar date.`, {
@@ -121,6 +122,9 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
         details: wouldSend,
         tool: 'crowntown_report_missed_pickup',
         confirmToken,
+        // Single-account server: the session is whichever CROWNTOWN_* login is configured.
+        account: undefined,
+        args,
         subject: () => ({
           target: date,
           payload: wouldSend,
@@ -156,7 +160,8 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ message, email, phone, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { message, email, phone, confirmToken } = args;
       // The form pre-fills email and phone from the account and a browser submits
       // them; read it first so an omitted field carries that value, not nothing.
       // Read on every call, so the preview (and the token) name the real values.
@@ -178,6 +183,9 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
         details: wouldSend,
         tool: 'crowntown_contact_support',
         confirmToken,
+        // Single-account server: the session is whichever CROWNTOWN_* login is configured.
+        account: undefined,
+        args,
         subject: () => ({
           target: SUPPORT_PATH,
           payload: { endpoint: SUPPORT_PATH, body: params.toString() },

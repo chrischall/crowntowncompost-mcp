@@ -132,7 +132,8 @@ export function registerAccountTools(
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ confirmToken, ...changes }, ctx) => {
+    async (args, ctx) => {
+      const { confirmToken, ...changes } = args;
       const provided = Object.fromEntries(
         Object.entries(changes).filter(([, v]) => v !== undefined),
       ) as Partial<AccountDetails>;
@@ -158,6 +159,9 @@ export function registerAccountTools(
         details: { changes: provided, wouldSet: next },
         tool: 'crowntown_update_account',
         confirmToken,
+        // Single-account server: the session is whichever CROWNTOWN_* login is configured.
+        account: undefined,
+        args,
         // `next` is the whole form that will be re-saved, current values
         // included, so an edit made elsewhere between the calls is refused.
         subject: () => ({
