@@ -6,7 +6,7 @@ import type { PortalRequest, PortalResponse, PortalTransport } from '../src/tran
 import { registerServiceTools } from '../src/tools/service.js';
 import { registerBillingTools } from '../src/tools/billing.js';
 import { registerAccountTools } from '../src/tools/account.js';
-import { registerSupportTools } from '../src/tools/support.js';
+import { registerSupportTools, toPortalDate } from '../src/tools/support.js';
 import { registerHealthcheckTools } from '../src/tools/healthcheck.js';
 import { DASHBOARD_HTML, IMPACT_HTML, UPDATE_FORM_HTML, CALENDAR_HTML, LOGIN_PAGE_HTML } from './fixtures/pages.js';
 
@@ -403,6 +403,45 @@ const MISSED_PICKUP_FORM_HTML = `<form method="post">
   <textarea name="comment" class="form-control"></textarea>
 </form>`;
 const PORTAL = 'https://portal.crowntowncompost.com';
+
+// The audit reproduced these with TZ=America/New_York: an ISO datetime parsed
+// as UTC then re-read with local getters landed a day early, and a bare year
+// read as Jan 1 UTC became 2025-12-31 (chrischall/fleet-audit#995).
+describe('toPortalDate', () => {
+  const savedTz = process.env.TZ;
+  afterEach(() => {
+    if (savedTz === undefined) delete process.env.TZ;
+    else process.env.TZ = savedTz;
+  });
+
+  it.each(['America/New_York', 'UTC', 'Asia/Tokyo'])('keeps the calendar day of an ISO datetime in %s', (tz) => {
+    process.env.TZ = tz;
+    expect(toPortalDate('2026-07-24T00:00:00Z')).toBe('2026-07-24');
+    expect(toPortalDate('2026-07-24T23:30:00-05:00')).toBe('2026-07-24');
+    expect(toPortalDate('2026-07-24 08:00')).toBe('2026-07-24');
+  });
+
+  it('refuses a bare year or year-month rather than guessing a day', () => {
+    process.env.TZ = 'America/New_York';
+    expect(toPortalDate('2026')).toBeNull();
+    expect(toPortalDate('2026-07')).toBeNull();
+    expect(toPortalDate('in 2026')).toBeNull();
+  });
+
+  it('refuses an ISO-shaped string that is not a real date', () => {
+    expect(toPortalDate('2026-02-30')).toBeNull();
+    expect(toPortalDate('2026-13-01T00:00:00Z')).toBeNull();
+  });
+
+  it('still reads the human forms the service calendar shows', () => {
+    process.env.TZ = 'America/New_York';
+    expect(toPortalDate('Jul 24, 2026')).toBe('2026-07-24');
+    expect(toPortalDate('24 Jul 2026')).toBe('2026-07-24');
+    expect(toPortalDate('7/24/2026')).toBe('2026-07-24');
+    expect(toPortalDate('Friday, Jul 24, 2026')).toBe('2026-07-24');
+    expect(toPortalDate('Jul 24')).toBeNull();
+  });
+});
 
 describe('support write tools', () => {
   it('report_missed_pickup phase 1 makes no call and returns a preview + confirmToken', async () => {

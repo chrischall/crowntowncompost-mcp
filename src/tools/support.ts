@@ -15,7 +15,13 @@ import type { PortalResponse } from '../transport.js';
 const MISSED_PICKUP_PATH = '/accounts/report-missed-pickup/';
 const SUPPORT_PATH = '/accounts/support/';
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// A leading YYYY-MM-DD, optionally followed by a time (`T…` or a space). The
+// calendar day is taken as written: running an ISO datetime through Date.parse
+// reads it as UTC and the local getters below then shift it by a day.
+const ISO_DATE_PREFIX_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s]|$)/;
+// A human date must name its month (a word) or be numeric d/m/y — never a bare
+// year or year-month, which Date.parse would quietly pin to the 1st in UTC.
+const HAS_MONTH_RE = /[a-z]{3}|\d{1,2}[/.-]\d{1,2}[/.-]\d{4}/i;
 const WEEKDAY_PREFIX_RE = /^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+/i;
 
 /**
@@ -27,10 +33,18 @@ const WEEKDAY_PREFIX_RE = /^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+/i;
  */
 export function toPortalDate(input: string): string | null {
   const s = input.trim();
-  if (ISO_DATE_RE.test(s)) return s;
+  const iso = ISO_DATE_PREFIX_RE.exec(s);
+  if (iso) {
+    const [, y, m, d] = iso.map(Number);
+    // Round-trip through UTC so a non-existent day (2026-02-30) is refused.
+    const check = new Date(Date.UTC(y!, m! - 1, d!));
+    const real = check.getUTCFullYear() === y && check.getUTCMonth() === m! - 1 && check.getUTCDate() === d;
+    return real ? s.slice(0, 10) : null;
+  }
   const stripped = s.replace(WEEKDAY_PREFIX_RE, '');
-  // Require an explicit year so a bare "Jul 24" is not silently read as 2001.
-  if (!/\b\d{4}\b/.test(stripped)) return null;
+  // Require an explicit year so a bare "Jul 24" is not silently read as 2001,
+  // and a month so a bare "2026" is not read as Jan 1 UTC.
+  if (!/\b\d{4}\b/.test(stripped) || !HAS_MONTH_RE.test(stripped)) return null;
   const ms = Date.parse(stripped);
   if (Number.isNaN(ms)) return null;
   const d = new Date(ms);
