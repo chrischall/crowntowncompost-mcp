@@ -35,7 +35,9 @@
       "env": {
         "CROWNTOWN_SESSION_COOKIE": "${user_config.crowntown_session_cookie}",
         "CROWNTOWN_USERNAME": "${user_config.crowntown_username}",
-        "CROWNTOWN_PASSWORD": "${user_config.crowntown_password}"
+        "CROWNTOWN_PASSWORD": "${user_config.crowntown_password}",
+        "CROWNTOWN_SESSION_CACHE": "${user_config.crowntown_session_cache}",
+        "CROWNTOWN_SESSION_FILE": "${user_config.crowntown_session_file}"
       }
     }
   },
@@ -60,6 +62,20 @@
       "description": "Your Crown Town Compost customer-portal password. Needed only if you are not supplying a session cookie above.",
       "required": false,
       "sensitive": true
+    },
+    "crowntown_session_cache": {
+      "type": "boolean",
+      "title": "Cache Portal Session",
+      "description": "Set to false to disable the on-disk session cache and re-authenticate on every process start. Defaults to enabled.",
+      "required": false,
+      "default": true
+    },
+    "crowntown_session_file": {
+      "type": "string",
+      "title": "Session Cache File",
+      "description": "Absolute path for the session cache file. Defaults to $MCP_DATA_DIR/.crowntowncompost-mcp/session.json.",
+      "required": false,
+      "sensitive": false
     }
   },
   "tools": [
