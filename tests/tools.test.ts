@@ -251,6 +251,30 @@ describe('crowntown_list_invoices', () => {
     expect(out.invoices).toHaveLength(1);
     expect(out.invoices[0].number).toBe('INV-2');
   });
+
+  // The filter used to run over the one fetched page while total/pages still
+  // described every invoice, so an open invoice on page 2 read as "nothing
+  // owed" (chrischall/fleet-audit#395).
+  it('payable_only walks every page and reports the filtered count', async () => {
+    const row = (id: number, payable: boolean) => ({ ...invoices.data[payable ? 1 : 0], RecordID: id, number: `INV-${id}`, is_payable: payable });
+    const pages = [
+      [row(1, false), row(2, false)],
+      [row(3, false), row(4, true)],
+      [row(5, true)],
+    ];
+    const { harness: h, transport } = await setup((req) => {
+      const p = Number(new URLSearchParams(req.body!).get('pagination[page]'));
+      return json({ meta: { page: p, pages: 3, perpage: 2, total: 5, sort: 'desc', field: 'date' }, qs: '', data: pages[p - 1] });
+    }, (s, c) => registerBillingTools(s, c));
+    const out = await call(h, 'crowntown_list_invoices', { payable_only: true, per_page: 1 });
+    expect(transport.writes).toHaveLength(3);
+    expect(out.total).toBe(2);
+    expect(out.pages).toBe(2);
+    expect(out.page).toBe(1);
+    expect(out.invoices.map((i: { number: string }) => i.number)).toEqual(['INV-4']);
+    const page2 = await call(h, 'crowntown_list_invoices', { payable_only: true, per_page: 1, page: 2 });
+    expect(page2.invoices.map((i: { number: string }) => i.number)).toEqual(['INV-5']);
+  });
 });
 
 describe('crowntown_get_dashboard', () => {
