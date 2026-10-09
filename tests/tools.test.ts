@@ -635,6 +635,18 @@ describe('write confirmation', () => {
     expect(transport.writes).toHaveLength(0);
   });
 
+  // The token binds the tool's arguments, not only the normalised payload: two
+  // spellings of the same date send the same body, but a token minted for one
+  // must not authorise the other.
+  it('refuses a token reused with different arguments even when the payload is identical', async () => {
+    const { harness: h, transport } = await setup(OK, register);
+    const phase1 = await call(h, 'crowntown_report_missed_pickup', { date: '2026-07-24', comment: 'bin was out' });
+    const out = await h.callTool('crowntown_report_missed_pickup', { date: 'Jul 24, 2026', comment: 'bin was out', confirmToken: phase1.confirmToken });
+    expect(out.isError).toBe(true);
+    expect(parseToolResult(out)).toMatchObject({ error: 'DRAFT_CHANGED' });
+    expect(transport.writes).toHaveLength(0);
+  });
+
   it('writes when a prompt-capable client accepts the confirmation', async () => {
     const { harness: h, transport } = await setup(OK, register, {
       elicitation: async () => ({ action: 'accept', content: { confirmed: true } }),
