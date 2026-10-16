@@ -19,7 +19,8 @@ const TRANSPORT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'tr
 // sandboxed test pool substitutes its own `fetch` wrapper for the global (it
 // does not report [native code]), so a detached call resolves normally there
 // too — a runtime assertion passes with the bug present. Hence the static
-// assertion below.
+// assertion below. The transport now goes through mcp-utils `fetchBounded`,
+// which calls the global `fetch` itself; the check follows that.
 //
 // So this asserts the one property that actually distinguishes the two forms:
 // the source calls the bare global. It is a shape assertion rather than a
@@ -28,8 +29,12 @@ const TRANSPORT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'tr
 describe('FetchTransport global-fetch binding', () => {
   const source = readFileSync(TRANSPORT, 'utf8');
 
-  it('calls the bare global fetch', () => {
-    expect(source).toMatch(/\bawait fetch\(/);
+  it('calls the global fetch: bare, or through fetchBounded with no injected fetchImpl', () => {
+    // fetchBounded (mcp-utils) invokes the global `fetch` as a plain function
+    // call when no fetchImpl is given. Injecting one is where a detached
+    // `globalThis.fetch` reference would sneak back in, so it is refused here.
+    expect(source).toMatch(/\bawait fetch\(|\bfetchBounded\(/);
+    expect(source).not.toMatch(/fetchImpl\s*:/);
   });
 
   it('never stores globalThis.fetch for a detached call', () => {
