@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.6](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.5...v1.1.6) (2026-10-16)
+
+
+### Bug Fixes
+
+* **plugin:** launch the published package so marketplace installs start ([#113](https://github.com/chrischall/crowntowncompost-mcp/issues/113)) ([d3a3c34](https://github.com/chrischall/crowntowncompost-mcp/commit/d3a3c3436ac45df60d057565ef3be7873996bc4e))
+* **transport:** cap portal response size and honour call cancellation ([#111](https://github.com/chrischall/crowntowncompost-mcp/issues/111)) ([9c8d659](https://github.com/chrischall/crowntowncompost-mcp/commit/9c8d659cc6e2d71a5350f8f7e830b572a69f7679))
+
 ## [1.1.5](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.4...v1.1.5) (2026-10-09)
 
 
