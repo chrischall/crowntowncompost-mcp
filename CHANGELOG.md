@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.6...v1.1.7) (2026-10-17)
+
+
+### Bug Fixes
+
+* **deps:** bump dotenv ([#116](https://github.com/chrischall/crowntowncompost-mcp/issues/116)) ([85ec329](https://github.com/chrischall/crowntowncompost-mcp/commit/85ec32969124acc79866036ff9d52a83c2c744f0))
+
 ## [1.1.6](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.5...v1.1.6) (2026-10-16)
 
 
