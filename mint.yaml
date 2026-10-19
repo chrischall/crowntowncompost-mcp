@@ -4,6 +4,13 @@ slug: crowntowncompost
 summary: >-
   Crown Town Compost pickups, invoices, and service skips for Claude —
   access via natural language
+examples:
+  - prompt: When is my next compost pickup, and what time does the truck usually show up?
+    note: Uses the pickup schedule and the observed arrival window.
+  - prompt: Were any of my pickups in the last two months marked missing or inaccessible?
+    note: Filters service history by stop status.
+  - prompt: How much did I pay Crown Town Compost this year, and is any invoice still unpaid?
+    note: Read-only billing history with invoice status.
 env:
   - name: CROWNTOWN_SESSION_COOKIE
     secret: true
