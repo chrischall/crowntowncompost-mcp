@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.8](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.7...v1.1.8) (2026-10-23)
+
+
+### Bug Fixes
+
+* **deps:** bump the production-dependencies group with 3 updates ([#123](https://github.com/chrischall/crowntowncompost-mcp/issues/123)) ([7d5825b](https://github.com/chrischall/crowntowncompost-mcp/commit/7d5825b9edd10b7e361004e9921227901844e9b3))
+
+
+### Documentation
+
+* **mint:** add sample prompts for the public catalog ([#120](https://github.com/chrischall/crowntowncompost-mcp/issues/120)) ([ea36fbd](https://github.com/chrischall/crowntowncompost-mcp/commit/ea36fbd56ec8ba614ee9e88ed3c46e1b80aad417))
+
 ## [1.1.7](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.6...v1.1.7) (2026-10-17)
 
 
