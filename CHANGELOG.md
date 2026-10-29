@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.8](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.7...v1.1.8) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** bump the production-dependencies group with 3 updates ([#123](https://github.com/chrischall/crowntowncompost-mcp/issues/123)) ([7d5825b](https://github.com/chrischall/crowntowncompost-mcp/commit/7d5825b9edd10b7e361004e9921227901844e9b3))
+* **deps:** require @chrischall/mcp-utils 3.4.0 ([#124](https://github.com/chrischall/crowntowncompost-mcp/issues/124)) ([fb04b2b](https://github.com/chrischall/crowntowncompost-mcp/commit/fb04b2b7c22e254b1d1c517de6c620a8ceafb74a))
+* **deps:** require the MCP SDK ^2.4.0 that mcp-utils 3.4.0 peer-requires ([#125](https://github.com/chrischall/crowntowncompost-mcp/issues/125)) ([c8e324f](https://github.com/chrischall/crowntowncompost-mcp/commit/c8e324f10db7c57fa0d40747a280c7ae645e6b72))
+
+
+### Documentation
+
+* **mint:** add sample prompts for the public catalog ([#120](https://github.com/chrischall/crowntowncompost-mcp/issues/120)) ([ea36fbd](https://github.com/chrischall/crowntowncompost-mcp/commit/ea36fbd56ec8ba614ee9e88ed3c46e1b80aad417))
+
 ## [1.1.7](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.6...v1.1.7) (2026-10-17)
 
 
