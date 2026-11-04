@@ -34,6 +34,9 @@ export function registerBillingTools(server: McpServer, client: CrownTownClient)
         payable_only: z
           .boolean()
           .optional()
+          // Published as `default: false` (the full view's default). Not `.default(false)`:
+          // that would fill the argument in before the handler, and brief needs to see it absent.
+          .meta({ default: false })
           .describe('Return only open/payable invoices, searched across your whole billing history; page/per_page/total then describe the payable invoices. Defaults to false, or to true with view "brief" (what is due).'),
         view: z
           .enum(['full', 'brief'])
