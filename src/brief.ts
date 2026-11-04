@@ -15,12 +15,22 @@ export function briefDate(raw: string | undefined): string {
   return (raw && toPortalDate(raw)) || 'no date';
 }
 
-/** One brief line; the title is shortened (never the date or status) to fit. */
+/** The shortest a title is cut to before the status gives way too. */
+const TITLE_FLOOR = 24;
+
+const cut = (s: string, n: number): string => (s.length > n ? `${s.slice(0, Math.max(n - 1, 0))}…` : s);
+
+/**
+ * One brief line, cut to ≤ 120 chars as a WHOLE, title first: the title
+ * shortens until the line fits; if the status (portal text on invoices)
+ * would still overflow once the title is at its floor, the status is cut too.
+ */
 export function briefLine(title: string, date: string, status: string): string {
-  const tail = ` — ${date} — ${status}`;
-  const room = BRIEF_MAX - tail.length;
-  const shown = title.length > room ? `${title.slice(0, Math.max(room - 1, 0))}…` : title;
-  return `${shown}${tail}`;
+  const sep = ` — ${date} — `;
+  const room = BRIEF_MAX - sep.length;
+  if (title.length + status.length <= room) return `${title}${sep}${status}`;
+  const shownTitle = cut(title, Math.max(room - status.length, Math.min(title.length, TITLE_FLOOR)));
+  return `${shownTitle}${sep}${cut(status, room - shownTitle.length)}`;
 }
 
 /** `-- none` when there are no items; `-- N of M shown` when the page is partial. */

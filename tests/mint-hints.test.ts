@@ -252,6 +252,14 @@ describe('crowntown_list_invoices view "brief"', () => {
     expect(line).toMatch(/… — 2026-08-01 — open$/);
   });
 
+  it('cuts the line as a WHOLE when the portal status alone would overflow, title first', async () => {
+    const status = 'S'.repeat(200);
+    const out = await text('crowntown_list_invoices', { view: 'brief' }, () => page([row(1, true, { status })]));
+    const [line] = envelope(out);
+    expect(line!.length).toBeLessThanOrEqual(120);
+    expect(line).toMatch(/^Invoice INV-1 \$44\.00 — 2026-08-01 — S+…$/);
+  });
+
   it('keeps the full answer (all invoices) by default', async () => {
     const out = JSON.parse(await text('crowntown_list_invoices', {}, () => page([row(1, false), row(2, true)])));
     expect(out.total).toBe(2);
