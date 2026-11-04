@@ -9,6 +9,8 @@ import {
 } from '@chrischall/mcp-utils';
 import type { CrownTownClient } from '../client.js';
 import { parseDashboard, parsePortalTime, parseSkippableServices, summarizeObservedTimes } from '../parse.js';
+import { briefDate, briefLine, briefResponse, withNotes } from '../brief.js';
+import { COMPOST_ALIASES, homeMeta } from './hints.js';
 
 /** A row from POST /accounts/stops/api/. */
 interface StopRow {
@@ -61,6 +63,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'List past collection stops for your account — date, status (Success/Missing/Empty/Inaccessible/Unacceptable), collection time, weight, and services rendered. Paginated and filterable by status. Read-only.',
       annotations: toolAnnotations({ title: 'List service history', readOnly: true, idempotent: true, openWorld: true }),
+      _meta: homeMeta('lookup', { aliases: ['compost pickups', 'past pickups', 'missed pickup'] }),
       inputSchema: z.object({
         status: z
           .enum(STOP_STATUS)
@@ -103,12 +106,24 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
     {
       title: 'List upcoming (skippable) services',
       description:
-        'List upcoming scheduled collection days from the service calendar, each with the identifiers needed to skip it (rid, clid), the service date, and whether it is currently scheduled or already skipped. Read-only — use crowntown_skip_service to actually skip/unskip.',
+        'List upcoming scheduled collection days from the service calendar, each with the identifiers needed to skip it (rid, clid), the service date, and whether it is currently scheduled or already skipped. view "brief" answers one line per day instead: "Compost pickup — <ISO date> — scheduled|skipped". Read-only — use crowntown_skip_service to actually skip/unskip.',
       annotations: toolAnnotations({ title: 'List upcoming services', readOnly: true, idempotent: true, openWorld: true }),
-      inputSchema: z.object({}),
+      _meta: homeMeta('whats-on', { canonical: true, aliases: COMPOST_ALIASES }),
+      inputSchema: z.object({
+        view: z
+          .enum(['full', 'brief'])
+          .optional()
+          .describe('"full" (default) returns each day with its skip ids; "brief" returns one line per day: Compost pickup — <ISO date or "no date"> — <scheduled|skipped>.'),
+      }),
     },
-    async () => {
+    async ({ view }) => {
       const services = parseSkippableServices(await client.fetchHtml('/accounts/service-calendar/'));
+      if (view === 'brief') {
+        // Every word on these lines is this server's own (the date is reformatted,
+        // the status derived from the button's action), so no untrusted envelope.
+        const status = (action: string) => (action === 'skip' ? 'scheduled' : action === 'unskip' ? 'skipped' : 'unknown');
+        return briefResponse(withNotes(services.map((s) => briefLine('Compost pickup', briefDate(s.route_date), status(s.action)))));
+      }
       return minifiedResult({
         count: services.length,
         note: 'action="skip" means the day is currently scheduled (calling skip will skip it); action="unskip" means it is already skipped.',
@@ -124,6 +139,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'Get the pickup schedule for each service address: pickup day(s), next service date, the official set-out-by time, and an observed arrival-time window (earliest/latest/typical and whether it is consistent or varies) derived from the recorded collection times in your service history. Crown Town Compost publishes no guaranteed arrival window, so the observed window is empirical. Read-only.',
       annotations: toolAnnotations({ title: 'Get pickup schedule', readOnly: true, idempotent: true, openWorld: true }),
+      _meta: homeMeta('lookup', { aliases: ['compost day', 'pickup day', 'pickup time', 'when to put the bin out'] }),
       inputSchema: z.object({
         history_sample: z
           .number()
@@ -211,6 +227,7 @@ export function registerServiceTools(server: McpServer, client: CrownTownClient)
       description:
         'Skip (or un-skip) an upcoming collection day. Pass the rid + clid from crowntown_list_upcoming_services. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Skip/un-skip a service', readOnly: false, openWorld: true, destructive: false }),
+      _meta: homeMeta('change', { aliases: ['skip compost', 'skip pickup', 'pause compost'] }),
       inputSchema: z.object({
         rid: z.string().regex(/^\d+$/).describe('Route id (data-rid) from crowntown_list_upcoming_services.'),
         clid: z.string().regex(/^\d+$/).describe('Client-location id (data-clid) from crowntown_list_upcoming_services.'),

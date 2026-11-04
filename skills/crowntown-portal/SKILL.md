@@ -169,6 +169,33 @@ ctget /accounts/service-calendar/ \
 `action="skip"` = currently scheduled (skipping it will skip it);
 `action="unskip"` = already skipped.
 
+## In context groups
+
+When the crowntowncompost-mcp server is hosted on mcp-host, its tools carry
+`_meta.mint` hints that put it in the **home** group, so a person can ask the
+whole group at once instead of naming this service.
+
+- **What's on** — `crowntown_list_upcoming_services` (canonical). With
+  `view: "brief"` it answers one line per collection day:
+  `Compost pickup — 2026-08-07 — scheduled` (or `skipped`), and `-- none`
+  when nothing is upcoming.
+- **What's due** — `crowntown_list_invoices` (canonical). With
+  `view: "brief"` it lists the payable invoices only (unless
+  `payable_only: false`), one line each, `Invoice <number> <amount> —
+  <ISO date> — <status>`, inside the untrusted-data envelope (`data: [...]`);
+  `-- none` when nothing is owed, `-- N of M shown` when the page is partial.
+- **No subjects.** The server signs in to one portal account and no tool
+  takes an address or account to choose between, so neither read takes a
+  subject; neither takes a date range either.
+- No "what's new" read: service history, the dashboard, the pickup schedule
+  and the account are lookups; skipping a day and updating the account are
+  changes; reporting a missed pickup and contacting support are sends.
+
+A compound ask looks like "when's compost pickup, and do I owe anything for
+it?" — the group's whats-on and whats-due reads answer the two halves. This
+server signs in with a username and password from the server side, so it needs
+no open browser.
+
 ## Writes (all POST; see `references/endpoints.md` for full field lists)
 
 **A 302 is not proof a write persisted — always re-read to verify.**
