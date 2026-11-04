@@ -229,6 +229,13 @@ describe('crowntown_list_invoices view "brief"', () => {
     expect(envelope(out)).toEqual(['Invoice INV-1 $44.00 — 2026-08-01 — open', '-- 1 of 3 shown']);
   });
 
+  it('publishes payable_only with default: false (the full view\'s default), while brief still picks payable when it is absent', async () => {
+    const tool = (await served()).find((t) => t.name === 'crowntown_list_invoices')!;
+    expect(tool.inputSchema.properties?.payable_only).toMatchObject({ type: 'boolean', default: false });
+    const out = await text('crowntown_list_invoices', { view: 'brief' }, () => page([row(1, false), row(2, true)]));
+    expect(envelope(out)).toEqual(['Invoice INV-2 $44.00 — 2026-08-01 — open']);
+  });
+
   it('honours an explicit payable_only: false', async () => {
     const out = await text('crowntown_list_invoices', { view: 'brief', payable_only: false }, () => page([row(1, false), row(2, true)], 2, 5));
     expect(envelope(out)).toEqual([
