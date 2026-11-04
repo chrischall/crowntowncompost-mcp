@@ -10,6 +10,7 @@ import {
 } from '@chrischall/mcp-utils';
 import { parse } from 'node-html-parser';
 import { viewArg, viewResponse } from '../view.js';
+import { homeMeta } from './hints.js';
 import type { CrownTownClient } from '../client.js';
 import {
   parseDashboard,
@@ -66,6 +67,7 @@ export function registerAccountTools(
         idempotent: true,
         openWorld: true,
       }),
+      _meta: homeMeta('lookup', { aliases: ['compost account', 'compost subscription', 'compost impact'] }),
       inputSchema: z.object({}),
     },
     async () => {
@@ -95,6 +97,7 @@ export function registerAccountTools(
         idempotent: true,
         openWorld: true,
       }),
+      _meta: homeMeta('lookup'),
       inputSchema: z.object({
         view: viewArg(),
       }),
@@ -117,6 +120,7 @@ export function registerAccountTools(
         openWorld: true,
         destructive: false,
       }),
+      _meta: homeMeta('change'),
       inputSchema: z.object({
         first_name: z.string().min(1).optional().describe('New first name.'),
         last_name: z.string().min(1).optional().describe('New last name.'),

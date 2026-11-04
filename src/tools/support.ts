@@ -10,6 +10,7 @@ import {
 } from '@chrischall/mcp-utils';
 import { parse } from 'node-html-parser';
 import type { CrownTownClient } from '../client.js';
+import { homeMeta } from './hints.js';
 import type { PortalResponse } from '../transport.js';
 
 const MISSED_PICKUP_PATH = '/accounts/report-missed-pickup/';
@@ -98,6 +99,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       description:
         'Report that a scheduled collection was missed. This notifies Crown Town Compost staff. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Report a missed pickup', readOnly: false, openWorld: true, destructive: true }),
+      _meta: homeMeta('send', { aliases: ['missed compost', 'compost not picked up'] }),
       inputSchema: z.object({
         date: z
           .string()
@@ -153,6 +155,7 @@ export function registerSupportTools(server: McpServer, client: CrownTownClient)
       description:
         'Send a message to Crown Town Compost customer support. The reply-to email and phone default to the ones the support form pre-fills from your account, and the preview shows the exact values that will be sent. Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).',
       annotations: toolAnnotations({ title: 'Contact support', readOnly: false, openWorld: true, destructive: true }),
+      _meta: homeMeta('send', { aliases: ['message compost company', 'compost support'] }),
       inputSchema: z.object({
         message: z.string().min(1).describe('The message to send to support.'),
         email: z.string().email().optional().describe('Reply-to email (defaults to the account email if omitted).'),
