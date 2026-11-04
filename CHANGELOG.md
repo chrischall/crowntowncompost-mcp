@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.8...v1.2.0) (2026-11-04)
+
+
+### Features
+
+* context-group hints ([#128](https://github.com/chrischall/crowntowncompost-mcp/issues/128)) ([3738db8](https://github.com/chrischall/crowntowncompost-mcp/commit/3738db8b9b9273f71b7d7b9d0a41d38f1168608a))
+
+
+### Bug Fixes
+
+* **billing:** publish payable_only's default: false again ([#130](https://github.com/chrischall/crowntowncompost-mcp/issues/130)) ([013ab5c](https://github.com/chrischall/crowntowncompost-mcp/commit/013ab5c242861fbe7719ad9c3557bc754ad9da4b)), closes [#129](https://github.com/chrischall/crowntowncompost-mcp/issues/129)
+* **brief:** align the brief view with the fleet contract ([#131](https://github.com/chrischall/crowntowncompost-mcp/issues/131)) ([dbe74f0](https://github.com/chrischall/crowntowncompost-mcp/commit/dbe74f0a39e9e8dbc2b8e5ebe8765ebd2d34b328))
+* **deps:** bump dotenv ([#126](https://github.com/chrischall/crowntowncompost-mcp/issues/126)) ([52ac03c](https://github.com/chrischall/crowntowncompost-mcp/commit/52ac03c5fd3a1fd81591ee3f7cb2f3470d3fc15a))
+
 ## [1.1.8](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.7...v1.1.8) (2026-10-29)
 
 
