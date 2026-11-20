@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.2.0...v1.2.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **deps:** bump @chrischall/mcp-utils ([#137](https://github.com/chrischall/crowntowncompost-mcp/issues/137)) ([3ce4042](https://github.com/chrischall/crowntowncompost-mcp/commit/3ce404258e607b0acb0b13b0b6919af88e95d77c))
+* **deps:** bump node-html-parser ([#134](https://github.com/chrischall/crowntowncompost-mcp/issues/134)) ([0bff78f](https://github.com/chrischall/crowntowncompost-mcp/commit/0bff78f1975675101f1b4d8a0710e8b2e6e7b2e4))
+* **deps:** bump the production-dependencies group with 3 updates ([#136](https://github.com/chrischall/crowntowncompost-mcp/issues/136)) ([80d763e](https://github.com/chrischall/crowntowncompost-mcp/commit/80d763eeca7805a98e05fa472bd18ee096217330))
+
 ## [1.2.0](https://github.com/chrischall/crowntowncompost-mcp/compare/v1.1.8...v1.2.0) (2026-11-04)
 
 
